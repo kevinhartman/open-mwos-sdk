@@ -3,4 +3,4 @@ project(os9_assembler)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(os9_assembler main.cpp)
+add_executable(os9_assembler main.cpp translation_unit.cpp)
