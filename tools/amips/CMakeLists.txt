@@ -1,0 +1,1 @@
+add_executable(amips amips.cpp)

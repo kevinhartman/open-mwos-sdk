@@ -3,4 +3,8 @@ project(os9_assembler)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(os9_assembler main.cpp translation_unit.cpp)
+set(OS9TOOLCHAIN_MAIN_SRC_DIR     ${CMAKE_CURRENT_SOURCE_DIR}  )
+set(OS9TOOLCHAIN_MAIN_INCLUDE_DIR ${OS9TOOLCHAIN_MAIN_SRC_DIR}/include )
+
+add_subdirectory(lib)
+add_subdirectory(tools)

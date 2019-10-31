@@ -1,0 +1,1 @@
+#include "ROFObjectFile.h"
