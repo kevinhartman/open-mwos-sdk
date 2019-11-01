@@ -25,8 +25,7 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef ModuleInfoPrinter_hpp
-#define ModuleInfoPrinter_hpp
+#pragma once
 
 #include <ostream>
 
@@ -36,5 +35,3 @@ namespace ModuleInfoPrinter
 {
     void Print(Module& module, std::ostream& output_stream);
 }
-
-#endif /* ModuleInfoPrinter_hpp */

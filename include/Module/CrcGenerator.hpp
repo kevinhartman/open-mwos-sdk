@@ -25,15 +25,12 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef CrcGenerator_hpp
-#define CrcGenerator_hpp
+#pragma once
 
-#include <stdio.h>
+#include <cstdio>
 #include <cstdint>
 
 namespace CrcGenerator
 {
     void Generate(const char* data, size_t size, uint32_t* accumulator);
 }
-
-#endif /* CrcGenerator_hpp */

@@ -25,8 +25,7 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef ModuleUtils_hpp
-#define ModuleUtils_hpp
+#pragma once
 
 #include <cstdint>
 
@@ -43,5 +42,3 @@ namespace ModuleUtils
 
     uint32_t CalculateCrcComplement(const char* module_data, size_t size);
 }
-
-#endif /* ModuleUtils_hpp */

@@ -25,8 +25,7 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef ModuleHeader_hpp
-#define ModuleHeader_hpp
+#pragma once
 
 #include <array>
 #include <cstdint>
@@ -66,11 +65,10 @@ struct InitDataHeader
     uint64_t field;
     uint32_t GetOffset()
     {
-        return field >> 32;
+        return field >> 32U;
     }
     uint32_t GetByteCount()
     {
         return field & 0xFFFFFFFF;
     }
 } __attribute__((packed));
-#endif /* ModuleHeader_hpp */

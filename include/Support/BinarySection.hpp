@@ -25,11 +25,10 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef BinarySection_hpp
-#define BinarySection_hpp
+#pragma once
 
 #include <algorithm>
-#include <assert.h>
+#include <cassert>
 
 #define TARGET_BIG_ENDIAN false // Assume machine running this code is little endian
 
@@ -70,9 +69,7 @@ private:
     template <class T>
     static void EndianSwap(T *field)
     {
-        unsigned char *raw = reinterpret_cast<unsigned char*>(field);
+        auto *raw = reinterpret_cast<unsigned char*>(field);
         std::reverse(raw, raw + sizeof(T));
     }
 };
-
-#endif /* BinarySection_hpp */

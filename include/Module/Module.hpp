@@ -25,10 +25,9 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef Module_hpp
-#define Module_hpp
+#pragma once
 
-#include <stdio.h>
+#include <cstdio>
 #include <string>
 
 #include "ModuleHeader.hpp"
@@ -39,7 +38,7 @@ class Module
     const char* raw_module;
 
 public:
-    Module(const char* raw_module);
+    explicit Module(const char* raw_module);
 
     inline ModuleHeader& GetHeader()
     {
@@ -54,5 +53,3 @@ public:
     bool IsHeaderValid();
     bool IsCrcValid();
 };
-
-#endif /* Module_hpp */
