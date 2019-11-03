@@ -6,9 +6,7 @@
 #include "ROFWriter.h"
 
 int main() {
-
-    rof::ROFWriter writer(constants::CompilerVersion);
-    
+    rof::ROFWriter writer(constants::AssemblerVersion, true);
 
     return 0;
 }
