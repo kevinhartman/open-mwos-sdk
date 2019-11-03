@@ -30,45 +30,50 @@
 #include <array>
 #include <cstdint>
 
-struct ModuleHeader
-{
-    uint16_t sync_bytes,
-             sys_rev;
-    uint32_t size,
-             owner;
+namespace module {
+struct ModuleHeader {
+    uint16_t
+        sync_bytes,
+        sys_rev;
+    uint32_t
+        size,
+        owner;
     uint32_t offset_name;
-    uint16_t access,
-             tylan,
-             attrev,
-             edition;
-    uint32_t hw_needs,
-             offset_shared,
-             offset_symbol,
-             offset_exec,
-             offset_except,
-             size_data,
-             size_min_stack,
-             offset_idata,
-             offset_idref,
-             offset_init,
-             offset_term,
-             pointer_bias_data,
-             pointer_bias_code;
+    uint16_t
+        access,
+        tylan,
+        attrev,
+        edition;
+    uint32_t
+        hw_needs,
+        offset_shared,
+        offset_symbol,
+        offset_exec,
+        offset_except,
+        size_data,
+        size_min_stack,
+        offset_idata,
+        offset_idref,
+        offset_init,
+        offset_term,
+        pointer_bias_data,
+        pointer_bias_code;
     uint16_t link_ident;
     std::array<char, 8> pad;
     uint16_t parity;
 } __attribute__((packed));
 
 
-struct InitDataHeader
-{
+struct InitDataHeader {
     uint64_t field;
-    uint32_t GetOffset()
-    {
+
+    uint32_t GetOffset() {
         return field >> 32U;
     }
-    uint32_t GetByteCount()
-    {
+
+    uint32_t GetByteCount() {
         return field & 0xFFFFFFFF;
     }
 } __attribute__((packed));
+
+}

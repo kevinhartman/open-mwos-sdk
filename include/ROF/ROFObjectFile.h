@@ -3,9 +3,12 @@
 #include <vector>
 #include <string>
 
-class TranslationUnit {
-public:
+namespace rof {
 
+constexpr uint16_t ROFSyncBytes = 0U; //TODO: find correct value
+
+class ROFObjectFile {
+public:
     enum Type {
         Program = 1,
         Subroutine = 2,
@@ -56,7 +59,7 @@ public:
     };
 
 public:
-    TranslationUnit();
+    ROFObjectFile();
 
     const PSect& GetPSect() {
         return psect;
@@ -70,3 +73,5 @@ private:
     PSect psect;
     std::vector<VSect> vsects; // Vsect outside of PSect is unlikely, but possible
 };
+
+}

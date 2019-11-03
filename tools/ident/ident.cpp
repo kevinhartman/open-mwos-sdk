@@ -27,18 +27,26 @@
 
 #include <fstream>
 #include <iostream>
-#include <assert.h>
+#include <cassert>
 
 #include "Module.hpp"
 #include "ModuleHeader.hpp"
 #include "ModuleUtils.hpp"
 #include "ModuleInfoPrinter.hpp"
 
+using namespace module;
+
 int main(int argc, const char* argv[])
 {
     std::fstream file;
     file.exceptions(std::fstream::badbit | std::fstream::failbit | std::fstream::eofbit);
-    file.open(argv[1], std::fstream::in | std::fstream::binary);
+
+    try {
+        file.open(argv[1], std::fstream::in | std::fstream::binary);
+    } catch (std::exception const& e) {
+        std::cerr << e.what();
+        exit(1);
+    }
 
     // Read header
     char header_raw[sizeof(ModuleHeader)];
@@ -48,7 +56,7 @@ int main(int argc, const char* argv[])
 
     // Parse module size
     uint32_t module_size;
-    ModuleUtils::ParseSize(&module_size, header_raw);
+    util::ParseSize(&module_size, header_raw);
 
     // Read entire module
     char module_raw[module_size];
@@ -60,6 +68,6 @@ int main(int argc, const char* argv[])
     //assert(module.IsHeaderValid());
     assert(module.IsCrcValid());
 
-    ModuleInfoPrinter::Print(module, std::cout);
+    util::PrintModuleInfo(module, std::cout);
     return 0;
 }

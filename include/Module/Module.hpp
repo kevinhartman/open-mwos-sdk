@@ -32,16 +32,16 @@
 
 #include "ModuleHeader.hpp"
 
-class Module
-{
+namespace module {
+
+class Module {
     ModuleHeader header;
     const char* raw_module;
 
 public:
     explicit Module(const char* raw_module);
 
-    inline ModuleHeader& GetHeader()
-    {
+    inline ModuleHeader& GetHeader() {
         return header;
     }
 
@@ -49,7 +49,9 @@ public:
     bool IsBigEndian();
     InitDataHeader GetInitializationDataHeader();
     void GetDataReferenceList(uint32_t* unadjusted_pointers);
-    
+
     bool IsHeaderValid();
     bool IsCrcValid();
 };
+
+}

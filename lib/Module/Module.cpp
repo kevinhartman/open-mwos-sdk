@@ -32,40 +32,38 @@
 #include "ModuleUtils.hpp"
 #include "BinarySection.hpp"
 
-Module::Module(const char* raw_module) : raw_module(raw_module)
-{
-    ModuleUtils::ParseHeader(this->header, raw_module);
+namespace module {
+
+using BinarySection = support::BinarySection;
+
+Module::Module(const char* raw_module) : raw_module(raw_module) {
+    util::ParseHeader(this->header, raw_module);
 }
 
-std::string Module::GetName()
-{
+std::string Module::GetName() {
     return std::string(&this->raw_module[this->header.offset_name]);
 }
 
-bool Module::IsBigEndian()
-{
-    return ModuleUtils::IsBigEndian(this->raw_module);
+bool Module::IsBigEndian() {
+    return util::IsBigEndian(this->raw_module);
 }
 
-bool Module::IsHeaderValid()
-{
-    return this->header.parity == ModuleUtils::CalculateHeaderParity(this->raw_module);
+bool Module::IsHeaderValid() {
+    return this->header.parity == util::CalculateHeaderParity(this->raw_module);
 }
 
-bool Module::IsCrcValid()
-{
+bool Module::IsCrcValid() {
     const uint32_t crc_constant = 0x800fe3;
 
     uint32_t crc = -1;
-    CrcGenerator::Generate(this->raw_module, this->header.size, &crc);
+    crc::Generate(this->raw_module, this->header.size, &crc);
 
     return (crc & 0xFFFFFF) == crc_constant;
 }
 
-InitDataHeader Module::GetInitializationDataHeader()
-{
+InitDataHeader Module::GetInitializationDataHeader() {
     BinarySection section(this->raw_module + this->header.offset_idata, sizeof(InitDataHeader),
-        ModuleUtils::IsBigEndian(this->raw_module));
+        util::IsBigEndian(this->raw_module));
 
     InitDataHeader initDataHeader;
     section.ReadNext(&initDataHeader);
@@ -73,7 +71,8 @@ InitDataHeader Module::GetInitializationDataHeader()
     return initDataHeader;
 }
 
-void Module::GetDataReferenceList(uint32_t* unadjusted_pointers)
-{
-    BinarySection section(this->raw_module + this->header.offset_idref, ModuleUtils::IsBigEndian(this->raw_module));
+void Module::GetDataReferenceList(uint32_t* unadjusted_pointers) {
+    BinarySection section(this->raw_module + this->header.offset_idref, util::IsBigEndian(this->raw_module));
+}
+
 }

@@ -29,30 +29,32 @@
 #include "ModuleUtils.hpp"
 #include "CrcGenerator.hpp"
 
-bool ModuleUtils::IsBigEndian(const char* header_data)
-{
+namespace module::util {
+
+using BinarySection = support::BinarySection;
+
+bool IsBigEndian(const char* header_data) {
     uint8_t mips[2] = { 0x4D, 0xAD };
     uint8_t _68k[2] = { 0x4A, 0xFC };
     uint8_t i386[2] = { 0xFC, 0x4A };
-    
+
     if (memcmp(header_data, mips, 2) == 0 ||
-        memcmp(header_data, _68k, 2) == 0) return true;
-    
+        memcmp(header_data, _68k, 2) == 0)
+        return true;
+
     if (memcmp(header_data, i386, 2) == 0) return false;
-    
+
     assert(false); // Unknown OS-9 Port / Arch
 }
 
-void ModuleUtils::ParseSize(uint32_t* size, const char* header_data)
-{
+void ParseSize(uint32_t* size, const char* header_data) {
     BinarySection parser(header_data + offsetof(ModuleHeader, size),
         sizeof(ModuleHeader::size), IsBigEndian(header_data));
-    
+
     parser.ReadNext(size);
 }
 
-void ModuleUtils::ParseHeader(ModuleHeader& header, const char* header_data)
-{
+void ParseHeader(ModuleHeader& header, const char* header_data) {
     BinarySection parser(header_data, sizeof(ModuleHeader), IsBigEndian(header_data));
 
     // TODO: is not swapping for header right?
@@ -83,11 +85,11 @@ void ModuleUtils::ParseHeader(ModuleHeader& header, const char* header_data)
     // Move pointer ahead for pad
     std::array<char, sizeof(ModuleHeader::pad)> dummy;
     parser.ReadNext(&dummy);
-    
+
     parser.ReadNext(&header.parity);
 }
 
-//void ModuleUtils::ParseDataReferenceList(uint32_t** ref_list, const char* module_data, const char* table_data)
+//void ParseDataReferenceList(uint32_t** ref_list, const char* module_data, const char* table_data)
 //{
 //    BinarySection ref_section(table_data);
 //
@@ -103,30 +105,29 @@ void ModuleUtils::ParseHeader(ModuleHeader& header, const char* header_data)
 //
 //}
 
-uint16_t ModuleUtils::CalculateHeaderParity(const char* header_data)
-{
+uint16_t CalculateHeaderParity(const char* header_data) {
     static_assert(sizeof(ModuleHeader) % 2 == 0, "Parity calculation assumes header is comprised of whole words.");
 
     BinarySection parser(header_data, sizeof(ModuleHeader) - sizeof(ModuleHeader::parity), IsBigEndian(header_data));
 
     uint16_t parity = 0;
     uint16_t word;
-    while (parser.ReadNext(&word))
-    {
+    while (parser.ReadNext(&word)) {
         parity ^= word;
     }
 
     return ~parity;
 }
 
-uint32_t ModuleUtils::CalculateCrcComplement(const char* module_data, size_t size)
-{
+uint32_t CalculateCrcComplement(const char* module_data, size_t size) {
     uint32_t crc = -1;
-    CrcGenerator::Generate(module_data, size, &crc);
+    module::crc::Generate(module_data, size, &crc);
 
     // Add one zero byte to CRC to account for first unused byte of CRC 32-bit field
     const char zero[] = { 0 };
-    CrcGenerator::Generate(zero, 1, &crc);
-    
+    module::crc::Generate(zero, 1, &crc);
+
     return ~crc;
+}
+
 }

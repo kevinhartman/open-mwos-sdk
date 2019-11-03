@@ -29,9 +29,10 @@
 
 #include "ModuleInfoPrinter.hpp"
 
-template <class T>
-void PrintHex(T printee, std::ostream& output_stream)
-{
+namespace module::util {
+
+template<class T>
+void PrintHex(T printee, std::ostream& output_stream) {
     std::ios_base::fmtflags backup_flags = output_stream.flags();
     char backup_fill = output_stream.fill();
 
@@ -44,8 +45,7 @@ void PrintHex(T printee, std::ostream& output_stream)
     output_stream.fill(backup_fill);
 }
 
-void PrintHex(uint8_t printee, std::ostream& output_stream)
-{
+void PrintHex(uint8_t printee, std::ostream& output_stream) {
     std::ios_base::fmtflags backup_flags = output_stream.flags();
     char backup_fill = output_stream.fill();
 
@@ -57,8 +57,7 @@ void PrintHex(uint8_t printee, std::ostream& output_stream)
     output_stream.fill(backup_fill);
 }
 
-void ModuleInfoPrinter::Print(Module &module, std::ostream& output_stream)
-{
+void PrintModuleInfo(Module& module, std::ostream& output_stream) {
     ModuleHeader& header = module.GetHeader();
 
     output_stream << "Sync Bytes: ";
@@ -69,7 +68,7 @@ void ModuleInfoPrinter::Print(Module &module, std::ostream& output_stream)
     output_stream << header.sys_rev << std::endl;
 
     output_stream << "Size: ";
-    output_stream << header.size  << std::endl;
+    output_stream << header.size << std::endl;
 
     output_stream << "Owner ID: ";
     output_stream << header.owner << std::endl;
@@ -138,7 +137,7 @@ void ModuleInfoPrinter::Print(Module &module, std::ostream& output_stream)
 
     output_stream << "Initialization Data Byte Count: ";
     output_stream << initDataHeader.GetByteCount() << std::endl;
-    
+
 //    output_stream << header.offset_idata << std::endl;
 //    output_stream << header.offset_idref << std::endl;
 //    output_stream << header.offset_init << std::endl;
@@ -149,4 +148,6 @@ void ModuleInfoPrinter::Print(Module &module, std::ostream& output_stream)
 //    output_stream << header.parity << std::endl;
     output_stream << std::endl;
     std::flush(output_stream);
+}
+
 }

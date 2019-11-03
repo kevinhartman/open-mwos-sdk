@@ -31,7 +31,7 @@
 
 #include "Module.hpp"
 
-namespace ModuleInfoPrinter
+namespace module::util
 {
-    void Print(Module& module, std::ostream& output_stream);
+    void PrintModuleInfo(Module& module, std::ostream& output_stream);
 }

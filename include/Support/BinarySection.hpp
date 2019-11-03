@@ -30,10 +30,11 @@
 #include <algorithm>
 #include <cassert>
 
+namespace support {
+
 #define TARGET_BIG_ENDIAN false // Assume machine running this code is little endian
 
-class BinarySection
-{
+class BinarySection {
     const char* data;
     const size_t data_size = 0;
     bool big_endian;
@@ -41,35 +42,34 @@ class BinarySection
     size_t offset = 0;
 
 public:
-    BinarySection(const char* data, size_t data_size, bool big_endian) : data(data), data_size(data_size), big_endian(big_endian) { }
-    BinarySection(const char* data, bool big_endian) : data(data), big_endian(big_endian) { }
+    BinarySection(const char* data, size_t data_size, bool big_endian) : data(data), data_size(data_size), big_endian(big_endian) {}
 
-    inline void Seek(size_t offset)
-    {
+    BinarySection(const char* data, bool big_endian) : data(data), big_endian(big_endian) {}
+
+    inline void Seek(size_t offset) {
         this->offset = offset;
     }
-    
+
     template<class T>
-    bool ReadNext(T* field)
-    {
+    bool ReadNext(T* field) {
         if (data_size != 0 && offset + sizeof(T) > data_size) return false;
 
         *field = *reinterpret_cast<const T*>(data + offset);
-        if (TARGET_BIG_ENDIAN != big_endian)
-        {
+        if (TARGET_BIG_ENDIAN != big_endian) {
             EndianSwap(field);
         }
-        
+
         offset += sizeof(T);
 
         return true;
     }
 
 private:
-    template <class T>
-    static void EndianSwap(T *field)
-    {
-        auto *raw = reinterpret_cast<unsigned char*>(field);
+    template<class T>
+    static void EndianSwap(T* field) {
+        auto* raw = reinterpret_cast<unsigned char*>(field);
         std::reverse(raw, raw + sizeof(T));
     }
 };
+
+}

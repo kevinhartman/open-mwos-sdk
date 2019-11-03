@@ -31,7 +31,7 @@
 
 #include "ModuleHeader.hpp"
 
-namespace ModuleUtils
+namespace module::util
 {
     bool IsBigEndian(const char* header_data);
     void ParseSize(uint32_t* size, const char* header_data);

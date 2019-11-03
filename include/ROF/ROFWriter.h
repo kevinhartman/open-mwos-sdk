@@ -1,10 +1,14 @@
 #pragma once
 
-class TranslationUnit;
+namespace rof {
+
+class ROFObjectFile;
 
 class ROFWriter {
 public:
     ROFWriter();
 
-    void Write(TranslationUnit* translation_unit);
+    void Write(const ROFObjectFile&);
 };
+
+}

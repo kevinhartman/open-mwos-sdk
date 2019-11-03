@@ -30,7 +30,6 @@
 #include <cstdio>
 #include <cstdint>
 
-namespace CrcGenerator
-{
-    void Generate(const char* data, size_t size, uint32_t* accumulator);
+namespace module::crc {
+void Generate(const char* data, size_t size, uint32_t* accumulator);
 }
