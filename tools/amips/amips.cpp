@@ -1,6 +1,14 @@
 #include <iostream>
 
+#include "amips.h"
+
+#include "ROFObjectFile.h"
+#include "ROFWriter.h"
+
 int main() {
-    std::cout << "Hello, World!" << std::endl;
+
+    rof::ROFWriter writer(constants::CompilerVersion);
+    
+
     return 0;
 }

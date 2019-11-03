@@ -4,6 +4,8 @@
 
 namespace rof {
 
+ROFWriter::ROFWriter(uint16_t compiler_version) : compiler_version(compiler_version) {}
+
 void WriteHeader(const ROFObjectFile& rof_object) {
 
 }
