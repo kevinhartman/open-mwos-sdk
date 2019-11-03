@@ -32,7 +32,11 @@
 
 namespace support {
 
-#define TARGET_BIG_ENDIAN false // Assume machine running this code is little endian
+#if defined(BYTE_ORDER) && defined(BIG_ENDIAN) && BYTE_ORDER == BIG_ENDIAN
+constexpr bool IsBigEndianHost = true;
+#else
+constexpr bool IsBigEndianHost = false;
+#endif
 
 class BinarySection {
     const char* data;
@@ -55,7 +59,7 @@ public:
         if (data_size != 0 && offset + sizeof(T) > data_size) return false;
 
         *field = *reinterpret_cast<const T*>(data + offset);
-        if (TARGET_BIG_ENDIAN != big_endian) {
+        if (IsBigEndianHost != big_endian) {
             EndianSwap(field);
         }
 
