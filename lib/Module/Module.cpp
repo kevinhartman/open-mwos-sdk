@@ -30,11 +30,11 @@
 #include "Module.hpp"
 #include "CrcGenerator.hpp"
 #include "ModuleUtils.hpp"
-#include "BinarySection.hpp"
+#include "BinarySectionReader.hpp"
 
 namespace module {
 
-using BinarySection = support::BinarySection;
+using BinarySectionReader = support::BinarySectionReader;
 
 Module::Module(const char* raw_module) : raw_module(raw_module) {
     util::ParseHeader(this->header, raw_module);
@@ -61,9 +61,14 @@ bool Module::IsCrcValid() {
     return (crc & 0xFFFFFF) == crc_constant;
 }
 
+// TODO: deduplicate
+support::Endian EndianOf(const char* header_data) {
+    return util::IsBigEndian(header_data) ? support::Endian::big : support::Endian::little;
+}
+
 InitDataHeader Module::GetInitializationDataHeader() {
-    BinarySection section(this->raw_module + this->header.offset_idata, sizeof(InitDataHeader),
-        util::IsBigEndian(this->raw_module));
+    BinarySectionReader section(this->raw_module + this->header.offset_idata, sizeof(InitDataHeader),
+        EndianOf(this->raw_module));
 
     InitDataHeader initDataHeader;
     section.ReadNext(&initDataHeader);
@@ -72,7 +77,7 @@ InitDataHeader Module::GetInitializationDataHeader() {
 }
 
 void Module::GetDataReferenceList(uint32_t* unadjusted_pointers) {
-    BinarySection section(this->raw_module + this->header.offset_idref, util::IsBigEndian(this->raw_module));
+    BinarySectionReader section(this->raw_module + this->header.offset_idref, EndianOf(this->raw_module));
 }
 
 }

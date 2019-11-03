@@ -27,52 +27,42 @@
 
 #pragma once
 
+#include "Endian.h"
+
 #include <algorithm>
 #include <cassert>
 
 namespace support {
 
-#if defined(BYTE_ORDER) && defined(BIG_ENDIAN) && BYTE_ORDER == BIG_ENDIAN
-constexpr bool IsBigEndianHost = true;
-#else
-constexpr bool IsBigEndianHost = false;
-#endif
-
-class BinarySection {
+class BinarySectionReader {
+private:
     const char* data;
     const size_t data_size = 0;
-    bool big_endian;
+    Endian endianness;
 
     size_t offset = 0;
 
 public:
-    BinarySection(const char* data, size_t data_size, bool big_endian) : data(data), data_size(data_size), big_endian(big_endian) {}
+    BinarySectionReader(const char* data, size_t data_size, Endian endianness) : data(data), data_size(data_size), endianness(endianness) {}
 
-    BinarySection(const char* data, bool big_endian) : data(data), big_endian(big_endian) {}
+    BinarySectionReader(const char* data, Endian endianness) : data(data), endianness(endianness) {}
 
     inline void Seek(size_t offset) {
         this->offset = offset;
     }
 
-    template<class T>
+    template<typename T, typename = std::enable_if<std::is_scalar<T>::value>>
     bool ReadNext(T* field) {
         if (data_size != 0 && offset + sizeof(T) > data_size) return false;
 
         *field = *reinterpret_cast<const T*>(data + offset);
-        if (IsBigEndianHost != big_endian) {
+        if (endianness != ignore && endianness != HostEndian) {
             EndianSwap(field);
         }
 
         offset += sizeof(T);
 
         return true;
-    }
-
-private:
-    template<class T>
-    static void EndianSwap(T* field) {
-        auto* raw = reinterpret_cast<unsigned char*>(field);
-        std::reverse(raw, raw + sizeof(T));
     }
 };
 

@@ -25,13 +25,13 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "BinarySection.hpp"
+#include "BinarySectionReader.hpp"
 #include "ModuleUtils.hpp"
 #include "CrcGenerator.hpp"
 
 namespace module::util {
 
-using BinarySection = support::BinarySection;
+using BinarySectionReader = support::BinarySectionReader;
 
 bool IsBigEndian(const char* header_data) {
     uint8_t mips[2] = { 0x4D, 0xAD };
@@ -47,15 +47,19 @@ bool IsBigEndian(const char* header_data) {
     assert(false); // Unknown OS-9 Port / Arch
 }
 
+support::Endian EndianOf(const char* header_data) {
+    return IsBigEndian(header_data) ? support::Endian::big : support::Endian::little;
+}
+
 void ParseSize(uint32_t* size, const char* header_data) {
-    BinarySection parser(header_data + offsetof(ModuleHeader, size),
-        sizeof(ModuleHeader::size), IsBigEndian(header_data));
+    BinarySectionReader parser(header_data + offsetof(ModuleHeader, size),
+        sizeof(ModuleHeader::size), EndianOf(header_data));
 
     parser.ReadNext(size);
 }
 
 void ParseHeader(ModuleHeader& header, const char* header_data) {
-    BinarySection parser(header_data, sizeof(ModuleHeader), IsBigEndian(header_data));
+    BinarySectionReader parser(header_data, sizeof(ModuleHeader), EndianOf(header_data));
 
     // TODO: is not swapping for header right?
     parser.ReadNext(&header.sync_bytes);
@@ -91,7 +95,7 @@ void ParseHeader(ModuleHeader& header, const char* header_data) {
 
 //void ParseDataReferenceList(uint32_t** ref_list, const char* module_data, const char* table_data)
 //{
-//    BinarySection ref_section(table_data);
+//    BinarySectionReader ref_section(table_data);
 //
 //    uint16_t msw_offset;
 //    ref_section.ReadNext(&msw_offset);
@@ -99,7 +103,7 @@ void ParseHeader(ModuleHeader& header, const char* header_data) {
 //    uint16_t lsw_count;
 //    ref_section.ReadNext(&lsw_count);
 //
-//    BinarySection module_section(module_data);
+//    BinarySectionReader module_section(module_data);
 //
 //    module_section.Seek(msw_offset);
 //
@@ -108,7 +112,7 @@ void ParseHeader(ModuleHeader& header, const char* header_data) {
 uint16_t CalculateHeaderParity(const char* header_data) {
     static_assert(sizeof(ModuleHeader) % 2 == 0, "Parity calculation assumes header is comprised of whole words.");
 
-    BinarySection parser(header_data, sizeof(ModuleHeader) - sizeof(ModuleHeader::parity), IsBigEndian(header_data));
+    BinarySectionReader parser(header_data, sizeof(ModuleHeader) - sizeof(ModuleHeader::parity), EndianOf(header_data));
 
     uint16_t parity = 0;
     uint16_t word;
