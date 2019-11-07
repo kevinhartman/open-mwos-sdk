@@ -41,7 +41,7 @@ Module::Module(const char* raw_module) : raw_module(raw_module) {
 }
 
 std::string Module::GetName() {
-    return std::string(&this->raw_module[this->header.offset_name]);
+    return std::string(&this->raw_module[this->header.OffsetToName()]);
 }
 
 bool Module::IsBigEndian() {
@@ -49,14 +49,14 @@ bool Module::IsBigEndian() {
 }
 
 bool Module::IsHeaderValid() {
-    return this->header.parity == util::CalculateHeaderParity(this->raw_module);
+    return this->header.Parity() == util::CalculateHeaderParity(this->raw_module);
 }
 
 bool Module::IsCrcValid() {
     const uint32_t crc_constant = 0x800fe3;
 
     uint32_t crc = -1;
-    crc::Generate(this->raw_module, this->header.size, &crc);
+    crc::Generate(this->raw_module, this->header.Size(), &crc);
 
     return (crc & 0xFFFFFF) == crc_constant;
 }
@@ -67,7 +67,7 @@ support::Endian EndianOf(const char* header_data) {
 }
 
 InitDataHeader Module::GetInitializationDataHeader() {
-    BinarySectionReader section(this->raw_module + this->header.offset_idata, sizeof(InitDataHeader),
+    BinarySectionReader section(this->raw_module + this->header.InitializedDataOffset(), sizeof(InitDataHeader),
         EndianOf(this->raw_module));
 
     InitDataHeader initDataHeader;
@@ -77,7 +77,7 @@ InitDataHeader Module::GetInitializationDataHeader() {
 }
 
 void Module::GetDataReferenceList(uint32_t* unadjusted_pointers) {
-    BinarySectionReader section(this->raw_module + this->header.offset_idref, EndianOf(this->raw_module));
+    BinarySectionReader section(this->raw_module + this->header.InitDataRefOffset(), EndianOf(this->raw_module));
 }
 
 }

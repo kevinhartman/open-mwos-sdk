@@ -25,6 +25,7 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+#include <type_traits>
 #include "BinarySectionReader.hpp"
 #include "ModuleUtils.hpp"
 #include "CrcGenerator.hpp"
@@ -52,8 +53,8 @@ support::Endian EndianOf(const char* header_data) {
 }
 
 void ParseSize(uint32_t* size, const char* header_data) {
-    BinarySectionReader parser(header_data + offsetof(ModuleHeader, size),
-        sizeof(ModuleHeader::size), EndianOf(header_data));
+    BinarySectionReader parser(header_data + 4 /* byte offset of size. TODO: make helper function on SerializableStruct */,
+        sizeof(std::remove_reference<decltype(std::declval<ModuleHeader>().Size())>::type), EndianOf(header_data));
 
     parser.ReadNext(size);
 }
@@ -62,35 +63,35 @@ void ParseHeader(ModuleHeader& header, const char* header_data) {
     BinarySectionReader parser(header_data, sizeof(ModuleHeader), EndianOf(header_data));
 
     // TODO: is not swapping for header right?
-    parser.ReadNext(&header.sync_bytes);
-    parser.ReadNext(&header.sys_rev);
-    parser.ReadNext(&header.size);
-    parser.ReadNext(&header.owner);
-    parser.ReadNext(&header.offset_name);
-    parser.ReadNext(&header.access);
-    parser.ReadNext(&header.tylan);
-    parser.ReadNext(&header.attrev);
-    parser.ReadNext(&header.edition);
-    parser.ReadNext(&header.hw_needs);
-    parser.ReadNext(&header.offset_shared);
-    parser.ReadNext(&header.offset_symbol);
-    parser.ReadNext(&header.offset_exec);
-    parser.ReadNext(&header.offset_except);
-    parser.ReadNext(&header.size_data);
-    parser.ReadNext(&header.size_min_stack);
-    parser.ReadNext(&header.offset_idata);
-    parser.ReadNext(&header.offset_idref);
-    parser.ReadNext(&header.offset_init);
-    parser.ReadNext(&header.offset_term);
-    parser.ReadNext(&header.pointer_bias_data);
-    parser.ReadNext(&header.pointer_bias_code);
-    parser.ReadNext(&header.link_ident);
+    parser.ReadNext(&header.SyncBytes());
+    parser.ReadNext(&header.SystemRevision());
+    parser.ReadNext(&header.Size());
+    parser.ReadNext(&header.Owner());
+    parser.ReadNext(&header.OffsetToName());
+    parser.ReadNext(&header.Access());
+    parser.ReadNext(&header.TypeLanguage());
+    parser.ReadNext(&header.AttRev());
+    parser.ReadNext(&header.Edition());
+    parser.ReadNext(&header.HardwareNeeds());
+    parser.ReadNext(&header.OffsetToShared());
+    parser.ReadNext(&header.OffsetToSymbol());
+    parser.ReadNext(&header.OffsetToExec());
+    parser.ReadNext(&header.OffsetToExcept());
+    parser.ReadNext(&header.SizeOfData());
+    parser.ReadNext(&header.MinStackSize());
+    parser.ReadNext(&header.InitializedDataOffset());
+    parser.ReadNext(&header.InitDataRefOffset());
+    parser.ReadNext(&header.InitOffset());
+    parser.ReadNext(&header.TermOffset());
+    parser.ReadNext(&header.DataBias());
+    parser.ReadNext(&header.CodeBias());
+    parser.ReadNext(&header.LinkIdent());
 
     // Move pointer ahead for pad
-    std::array<char, sizeof(ModuleHeader::pad)> dummy;
+    std::array<char, 8> dummy;
     parser.ReadNext(&dummy);
 
-    parser.ReadNext(&header.parity);
+    parser.ReadNext(&header.Parity());
 }
 
 //void ParseDataReferenceList(uint32_t** ref_list, const char* module_data, const char* table_data)
@@ -112,7 +113,9 @@ void ParseHeader(ModuleHeader& header, const char* header_data) {
 uint16_t CalculateHeaderParity(const char* header_data) {
     static_assert(sizeof(ModuleHeader) % 2 == 0, "Parity calculation assumes header is comprised of whole words.");
 
-    BinarySectionReader parser(header_data, sizeof(ModuleHeader) - sizeof(ModuleHeader::parity), EndianOf(header_data));
+    BinarySectionReader parser(header_data,
+        sizeof(ModuleHeader) - sizeof(std::remove_reference<decltype(std::declval<ModuleHeader>().Parity())>::type),
+        EndianOf(header_data));
 
     uint16_t parity = 0;
     uint16_t word;

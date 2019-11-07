@@ -27,42 +27,52 @@
 
 #pragma once
 
+#include "SerializableStruct.h"
+
 #include <array>
 #include <cstdint>
 
 namespace module {
-struct ModuleHeader {
-    uint16_t
-        sync_bytes,
-        sys_rev;
-    uint32_t
-        size,
-        owner;
-    uint32_t offset_name;
-    uint16_t
-        access,
-        tylan,
-        attrev,
-        edition;
-    uint32_t
-        hw_needs,
-        offset_shared,
-        offset_symbol,
-        offset_exec,
-        offset_except,
-        size_data,
-        size_min_stack,
-        offset_idata,
-        offset_idref,
-        offset_init,
-        offset_term,
-        pointer_bias_data,
-        pointer_bias_code;
-    uint16_t link_ident;
-    std::array<char, 8> pad;
-    uint16_t parity;
-} __attribute__((packed));
 
+struct ModuleHeader : SerializableStruct<
+    type_sequence<uint16_t, 2>,
+    type_sequence<uint32_t, 3>,
+    type_sequence<uint16_t, 4>,
+    type_sequence<uint32_t, 13>,
+    uint16_t,
+    std::array<char, 8>, // pad
+    uint16_t
+> {
+    auto& SyncBytes() { return std::get<0>(*this); }
+    auto& SystemRevision() { return std::get<1>(*this); }
+
+    auto& Size() { return std::get<2>(*this); }
+    auto& Owner() { return std::get<3>(*this); }
+    auto& OffsetToName() { return std::get<4>(*this); }
+
+    auto& Access() { return std::get<5>(*this); }
+    auto& TypeLanguage() { return std::get<6>(*this); }
+    auto& AttRev() { return std::get<7>(*this); }
+    auto& Edition() { return std::get<8>(*this); }
+
+    auto& HardwareNeeds() { return std::get<9>(*this); }
+    auto& OffsetToShared() { return std::get<10>(*this); }
+    auto& OffsetToSymbol() { return std::get<11>(*this); }
+    auto& OffsetToExec() { return std::get<12>(*this); }
+    auto& OffsetToExcept() { return std::get<13>(*this); }
+    auto& SizeOfData() { return std::get<14>(*this); }
+    auto& MinStackSize() { return std::get<15>(*this); }
+    auto& InitializedDataOffset() { return std::get<16>(*this); }
+    auto& InitDataRefOffset() { return std::get<17>(*this); }
+    auto& InitOffset() { return std::get<18>(*this); }
+    auto& TermOffset() { return std::get<19>(*this); }
+    auto& DataBias() { return std::get<20>(*this); }
+    auto& CodeBias() { return std::get<21>(*this); }
+
+    auto& LinkIdent() { return std::get<22>(*this); }
+
+    auto& Parity() { return std::get<24>(*this); }
+};
 
 struct InitDataHeader {
     uint64_t field;
