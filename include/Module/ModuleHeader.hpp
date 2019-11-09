@@ -35,12 +35,12 @@
 namespace module {
 
 struct ModuleHeader : SerializableStruct<
-    type_sequence<uint16_t, 2>,
-    type_sequence<uint32_t, 3>,
-    type_sequence<uint16_t, 4>,
-    type_sequence<uint32_t, 13>,
+    SequenceOfType<uint16_t, 2>,
+    SequenceOfType<uint32_t, 3>,
+    SequenceOfType<uint16_t, 4>,
+    SequenceOfType<uint32_t, 13>,
     uint16_t,
-    std::array<char, 8>, // pad
+    PadBytes<8>,
     uint16_t
 > {
     auto& SyncBytes() { return std::get<0>(*this); }
