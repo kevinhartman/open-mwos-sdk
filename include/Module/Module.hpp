@@ -35,13 +35,10 @@
 namespace module {
 
 class Module {
-    ModuleHeader header;
-    const char* raw_module;
-
 public:
-    explicit Module(const char* raw_module);
+    Module(std::shared_ptr<ModuleHeader> header, std::unique_ptr<char> raw_module) : header(std::move(header)), raw_module(std::move(raw_module)) {}
 
-    inline ModuleHeader& GetHeader() {
+    inline std::shared_ptr<ModuleHeader> GetHeader() {
         return header;
     }
 
@@ -52,6 +49,10 @@ public:
 
     bool IsHeaderValid();
     bool IsCrcValid();
+
+private:
+    std::shared_ptr<ModuleHeader> header;
+    std::unique_ptr<char> raw_module;
 };
 
 }

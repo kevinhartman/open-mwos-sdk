@@ -34,8 +34,6 @@
 namespace module::util
 {
     bool IsBigEndian(const char* header_data);
-    void ParseSize(uint32_t* size, const char* header_data);
-    void ParseHeader(ModuleHeader& header, const char* header_data);
     void ParseDataReferenceList(uint32_t* ref_list, const char* table_data);
 
     uint16_t CalculateHeaderParity(const char* header_data);

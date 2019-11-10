@@ -28,11 +28,14 @@
 #include <fstream>
 #include <iostream>
 #include <cassert>
+#include <filesystem>
 
 #include "Module.hpp"
 #include "ModuleHeader.hpp"
 #include "ModuleUtils.hpp"
 #include "ModuleInfoPrinter.hpp"
+
+#include "TupleSerialization.h"
 
 using namespace module;
 
@@ -48,26 +51,21 @@ int main(int argc, const char* argv[])
         exit(1);
     }
 
-    // Read header
-    char header_raw[sizeof(ModuleHeader)];
-
+    // deserialize module header
     file.seekg(0);
-    file.read(header_raw, sizeof(ModuleHeader));
+    auto header = std::make_shared<ModuleHeader>();
+    serializer::DeserializeTuple<support::Endian::big>(*header, file);
 
-    // Parse module size
-    uint32_t module_size;
-    util::ParseSize(&module_size, header_raw);
-
-    // Read entire module
-    char module_raw[module_size];
-
+    // read entire module to memory
     file.seekg(0);
-    file.read(module_raw, module_size);
+    auto module_raw = std::make_unique<char>(header->Size()); // TODO: size could be wrong if incorrect in module
+    file.read(module_raw.get(), header->Size());
 
-    Module module(module_raw);
+    Module module(header, std::move(module_raw));
     //assert(module.IsHeaderValid());
     assert(module.IsCrcValid());
 
     util::PrintModuleInfo(module, std::cout);
+
     return 0;
 }

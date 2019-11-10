@@ -58,75 +58,75 @@ void PrintHex(uint8_t printee, std::ostream& output_stream) {
 }
 
 void PrintModuleInfo(Module& module, std::ostream& output_stream) {
-    ModuleHeader& header = module.GetHeader();
+    auto header = module.GetHeader();
 
     output_stream << "Sync Bytes: ";
-    PrintHex(header.SyncBytes(), output_stream);
+    PrintHex(header->SyncBytes(), output_stream);
     output_stream << " (" << (module.IsBigEndian() ? "big" : "little") << ") " << std::endl;
 
     output_stream << "System Revision: ";
-    output_stream << header.SystemRevision() << std::endl;
+    output_stream << header->SystemRevision() << std::endl;
 
     output_stream << "Size: ";
-    output_stream << header.Size() << std::endl;
+    output_stream << header->Size() << std::endl;
 
     output_stream << "Owner ID: ";
-    output_stream << header.Owner() << std::endl;
+    output_stream << header->Owner() << std::endl;
 
     output_stream << "Name: ";
     output_stream << module.GetName() << std::endl;
 
     output_stream << "Name Offset: ";
-    PrintHex(header.OffsetToName(), output_stream);
+    PrintHex(header->OffsetToName(), output_stream);
     output_stream << std::endl;
 
     output_stream << "Permissions: ";
-    PrintHex(header.Access(), output_stream);
+    PrintHex(header->Access(), output_stream);
     output_stream << std::endl;
 
     output_stream << "Type: ";
-    output_stream << (uint)(header.TypeLanguage() >> 8) << std::endl;
+    output_stream << (uint)(header->TypeLanguage() >> 8U) << std::endl;
 
     output_stream << "Language: ";
-    output_stream << (uint)(header.TypeLanguage() & 0x00FF) << std::endl;
+    output_stream << (uint)(header->TypeLanguage() & 0x00FFU) << std::endl;
 
     output_stream << "Attributes: ";
-    output_stream << (uint)(header.AttRev() >> 8) << std::endl;
+    output_stream << (uint)(header->AttRev() >> 8U) << std::endl;
 
     output_stream << "Attributes Revision: ";
-    output_stream << (uint)(header.AttRev() & 0x00FF) << std::endl;
+    output_stream << (uint)(header->AttRev() & 0x00FFU) << std::endl;
 
     output_stream << "Vendor Edition: ";
-    output_stream << header.Edition() << std::endl;
+    output_stream << header->Edition() << std::endl;
 
     output_stream << "Hardware Needs: ";
-    PrintHex(header.HardwareNeeds(), output_stream);
+    PrintHex(header->HardwareNeeds(), output_stream);
     output_stream << std::endl;
 
     output_stream << "Shared Data Offset: ";
-    PrintHex(header.OffsetToShared(), output_stream);
+    PrintHex(header->OffsetToShared(), output_stream);
     output_stream << std::endl;
 
     output_stream << "Symbol Table Offset: ";
-    PrintHex(header.OffsetToSymbol(), output_stream);
+    PrintHex(header->OffsetToSymbol(), output_stream);
     output_stream << std::endl;
 
     output_stream << "Exec Entry Point: ";
-    PrintHex(header.OffsetToExec(), output_stream);
+    PrintHex(header->OffsetToExec(), output_stream);
     output_stream << std::endl;
 
     output_stream << "Exception Entry Point: ";
-    PrintHex(header.OffsetToExcept(), output_stream);
+    PrintHex(header->OffsetToExcept(), output_stream);
     output_stream << std::endl;
 
     output_stream << "Program Data Size: ";
-    output_stream << header.SizeOfData() << std::endl;
+    output_stream << header->SizeOfData() << std::endl;
 
     output_stream << "Min Stack Size: ";
-    output_stream << header.MinStackSize() << std::endl;
+    output_stream << header->MinStackSize() << std::endl;
 
     output_stream << "Initialization Data Header Offset: ";
-    PrintHex(header.InitializedDataOffset(), output_stream);
+    PrintHex(header->InitializedDataOffset(), output_stream);
     output_stream << std::endl;
 
     InitDataHeader initDataHeader = module.GetInitializationDataHeader();
@@ -142,8 +142,8 @@ void PrintModuleInfo(Module& module, std::ostream& output_stream) {
 //    output_stream << header.offset_idref << std::endl;
 //    output_stream << header.offset_init << std::endl;
 //    output_stream << header.offset_term << std::endl;
-    output_stream << header.DataBias() << std::endl;
-    output_stream << header.CodeBias() << std::endl;
+    output_stream << header->DataBias() << std::endl;
+    output_stream << header->CodeBias() << std::endl;
 //    output_stream << header.link_ident << std::endl;
 //    output_stream << header.parity << std::endl;
     output_stream << std::endl;
