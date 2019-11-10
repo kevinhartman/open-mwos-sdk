@@ -34,7 +34,7 @@
 
 namespace module {
 
-struct ModuleHeader : SerializableStruct<
+using SerializableModuleHeader = SerializableStruct<
     SequenceOfType<uint16_t, 2>,
     SequenceOfType<uint32_t, 3>,
     SequenceOfType<uint16_t, 4>,
@@ -42,7 +42,9 @@ struct ModuleHeader : SerializableStruct<
     uint16_t,
     PadBytes<8>,
     uint16_t
-> {
+>;
+
+struct ModuleHeader : SerializableModuleHeader {
     auto& SyncBytes() { return std::get<0>(*this); }
     auto& SystemRevision() { return std::get<1>(*this); }
 

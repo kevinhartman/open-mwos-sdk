@@ -54,7 +54,8 @@ int main(int argc, const char* argv[])
     // deserialize module header
     file.seekg(0);
     auto header = std::make_shared<ModuleHeader>();
-    serializer::DeserializeTuple<support::Endian::big>(*header, file);
+    auto serializable = static_cast<SerializableModuleHeader*>(header.get());
+    serializer::DeserializeTuple<support::Endian::big>(*serializable, file);
 
     // read entire module to memory
     file.seekg(0);
