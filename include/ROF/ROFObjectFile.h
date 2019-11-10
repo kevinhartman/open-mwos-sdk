@@ -15,7 +15,7 @@ struct ExternDefinition {
 
 class ROFObjectFile {
 public:
-    ROFObjectFile() {}
+    ROFObjectFile() = default;
 
     inline ROFHeader& GetHeader() {
         return header;
@@ -27,6 +27,10 @@ public:
 
     inline std::string GetName() const {
         return nam;
+    }
+
+    inline void SetName(std::string nam) {
+        this->nam = nam;
     }
 
     inline const PSect& GetPSect() const {
