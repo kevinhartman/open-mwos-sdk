@@ -7,9 +7,19 @@
 
 namespace rof {
 
+struct ExternDefinition {
+    std::string name;
+    uint16_t type;
+    uint32_t symbol_value;
+};
+
 class ROFObjectFile {
 public:
-    ROFObjectFile();
+    ROFObjectFile() {}
+
+    inline ROFHeader& GetHeader() {
+        return header;
+    }
 
     inline const ROFHeader& GetHeader() const {
         return header;
@@ -26,6 +36,8 @@ public:
     inline const std::vector<VSect>& GetVSects() const {
         return vsects;
     }
+
+    std::vector<ExternDefinition> GetExternalDefinitions() const;
 
 private:
     ROFHeader header;

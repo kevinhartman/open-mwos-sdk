@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Endian.h"
+
 #include <cstdint>
 #include <ostream>
 
@@ -9,13 +11,13 @@ class ROFObjectFile;
 
 class ROFWriter {
 public:
-    ROFWriter(uint16_t compiler_version, bool big_endian);
+    ROFWriter(uint16_t compiler_version, support::Endian endianness);
 
     void Write(const ROFObjectFile&, std::ostream&);
 
 private:
     uint16_t asm_version;
-    bool is_big_endian;
+    support::Endian endianness;
 };
 
 }

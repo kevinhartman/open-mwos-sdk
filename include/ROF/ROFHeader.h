@@ -1,5 +1,7 @@
 #pragma once
 
+#include "SerializableStruct.h"
+
 #include <array>
 #include <string>
 #include <vector>
@@ -57,31 +59,47 @@ struct PSect {
     }
 };
 
-struct ROFHeader {
-    std::array<char, 4> sync_bytes;
-    uint16_t
-        tylan,
-        revision,
-        asm_valid,
-        asm_version;
-    std::array<char, 6> asm_date;
-    uint16_t edition;
-    uint32_t
-        static_data_size,
-        initialized_data_size,
-        const_data_size, // unused
-        code_size,
-        stack_size_required,
-        entry_offset,
-        uninitialized_trap_offset,
-        remote_static_data_storage_size,
-        remote_initialized_data_storage_size,
-        remote_const_data_storage_size, // unused
-        debug_info_size;
-    uint16_t target_cpu; // upper: family, lower: cpu code
-    uint16_t code_info; // probably a bitfield describing code. TODO: find compiled ROF with "threaded == 1"
-    uint16_t header_expansion; // unused
+using SerializableROFHeader = SerializableStruct<
+    SerializableArray<char, 4>,
+    SequenceOfType<uint16_t, 4>,
+    SerializableArray<char, 6>,
+    uint16_t,
+    SequenceOfType<uint32_t, 11>,
+    SequenceOfType<uint16_t, 3>
+>;
+
+struct ROFHeader : SerializableROFHeader {
+    auto& SyncBytes() { return std::get<0>(*this); }
+    auto& TypeLanguage() { return std::get<1>(*this); }
+    auto& Revision() { return std::get<2>(*this); }
+    auto& AsmValid() { return std::get<3>(*this); }
+    auto& AsmVersion() { return std::get<4>(*this); }
+    auto& AsmDate() { return std::get<5>(*this); }
+    auto& Edition() { return std::get<6>(*this); }
+    auto& StaticDataSize() { return std::get<7>(*this); }
+    auto& InitializedDataSize() { return std::get<8>(*this); }
+
+    __deprecated_msg("Reserved.")
+    auto& ConstantDataSize() { return std::get<9>(*this); }
+
+    auto& CodeSize() { return std::get<10>(*this); }
+    auto& RequiredStackSize() { return std::get<11>(*this); }
+    auto& OffsetToEntry() { return std::get<12>(*this); }
+    auto& OffsetToUninitializedTrapHandler() { return std::get<13>(*this); }
+    auto& RemoteStaticDataSizeRequired() { return std::get<14>(*this); }
+    auto& RemoteInitializedDataSizeRequired() { return std::get<15>(*this); }
+
+    __deprecated_msg("Reserved.")
+    auto& RemoteConstantDataSizeRequired() { return std::get<16>(*this); }
+
+    auto& DebugInfoSize() { return std::get<17>(*this); }
+    auto& TargetCPU() { return std::get<18>(*this); }
+    auto& CodeInfo() { return std::get<19>(*this); }
+
+    __deprecated_msg("Reserved.")
+    auto& HeaderExpansion() { return std::get<20>(*this); }
+
     // Note: null-terminated variable length module name immediately follows header.
-} __attribute__((packed));
+};
 
 }
