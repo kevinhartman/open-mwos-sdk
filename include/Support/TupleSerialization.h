@@ -1,121 +1,127 @@
 #pragma once
 
 #include "Endian.h"
+#include "SerializableStruct.h"
 
 #include <tuple>
+#include <string>
 #include <iostream>
 
+#define LOG_STEP(f_) (std::cout << (f_) << std::endl)
+
 namespace serializer_internal {
-// TODO: rewrite this if possible to avoid duplicating everything for const overloads
-template<support::Endian Endian, typename Visitor, typename Stream, bool ShouldSwap = Endian != support::Endian::ignore && Endian != support::HostEndian>
+
+template<typename T>
+using remove_cvref_t = std::remove_cv_t<std::remove_reference_t<T>>;
+
+template <typename> struct IsSerializableStruct : std::false_type {};
+template <typename ...T> struct IsSerializableStruct<std::tuple<T...>> : std::true_type {};
+
+template <typename> struct IsSerializableArray : std::false_type {};
+template <typename T, size_t I> struct IsSerializableArray<std::array<T, I>> : std::true_type {};
+
+template <typename T>
+using SerializableArrayElement = decltype(std::get<0>(std::declval<T>()));
+
+template<support::Endian Endian, typename Visitor, bool ShouldSwap = Endian != support::Endian::ignore && Endian != support::HostEndian>
 struct TupleVisitor {
     // TODO: add specializations for single byte scalars
-    template<typename T, typename std::enable_if<std::is_scalar<T>::value && !ShouldSwap, int>::type = 0>
-    static void Visit(T& field, Stream& output) {
-        Visitor::VisitScalar(field, output);
-    }
-
-    template<typename T, typename std::enable_if<std::is_scalar<T>::value && !ShouldSwap, int>::type = 0>
-    static void Visit(const T& field, Stream& output) {
-        Visitor::VisitScalar(field, output);
-    }
-
-    template<typename T, typename std::enable_if<std::is_scalar<T>::value && ShouldSwap, int>::type = 0>
-    static void Visit(T& field, Stream& output) {
-        Visitor::VisitSwappedScalar(field, output);
-    }
-
-    template<typename T, typename std::enable_if<std::is_scalar<T>::value && ShouldSwap, int>::type = 0>
-    static void Visit(const T& field, Stream& output) {
-        Visitor::VisitSwappedScalar(field, output);
-    }
-
-    template<size_t I>
-    static void Visit(std::array<char, I>& field, Stream& output) {
-        Visitor::VisitCharArray(field, output);
-    }
-
-    template<size_t I>
-    static void Visit(const std::array<char, I>& field, Stream& output) {
-        Visitor::VisitCharArray(field, output);
-    }
-
-    template<typename T, size_t I>
-    static void Visit(std::array<T, I>& field, Stream& output) {
-        for (auto& element : field) {
-            Visit(element, output);
+    template<typename T, typename Stream>
+    static void VisitElement(T&& field, Stream&& output) {
+        if constexpr (IsSerializableArray<remove_cvref_t<T>>::value) {
+            LOG_STEP("Detected array.");
+            if constexpr (std::is_same_v<remove_cvref_t<SerializableArrayElement<T>>, char>) {
+                // Special treatment of char arrays: visit as element
+                LOG_STEP("VisitElement: detected special case char array.");
+                Visitor::template VisitElement<ShouldSwap>(std::forward<T>(field), std::forward<Stream>(output));
+            } else {
+                // Array of some other type.
+                LOG_STEP("VisitElement: detected array. unpacking...");
+                VisitArray(std::forward<T>(field), std::forward<Stream>(output));
+            }
+        } else if constexpr (IsSerializableStruct<T>::value) {
+            LOG_STEP("VisitElement: detected tuple. unpacking...");
+            VisitTuple(std::forward<T>(field), std::forward<Stream>(output));
+        } else {
+            // We don't special case this type. Allow the Visitor to handle it.
+            LOG_STEP("VisitElement: detected unknown element type. forwarding to Visitor...");
+            Visitor::template VisitElement<ShouldSwap>(std::forward<T>(field), std::forward<Stream>(output));
         }
     }
 
-    template<typename T, size_t I>
-    static void Visit(const std::array<T, I>& field, Stream& output) {
-        for (auto& element : field) {
-            Visit(element, output);
+    template<typename T, typename Stream>
+    static void VisitArray(T&& field, Stream&& output) {
+        LOG_STEP("Begin array.");
+        for (auto&& element : field) {
+            VisitElement(std::forward<decltype(element)>(element), std::forward<Stream>(output));
         }
+        LOG_STEP("End array.");
     }
 
-    template<typename T, typename std::enable_if<!std::is_scalar<T>::value, int>::type = 0>
-    static void Visit(const T& field, Stream& output) {
-        static_assert(std::is_scalar<T>::value, "Serializer only supports std::tuple and std::array containers and scalar elements.");
-    }
-
-    template<typename ... Ts, size_t ... Is>
-    static void Visit(std::tuple<Ts...>& structure, Stream& output, std::index_sequence<Is...>) {
+    template<typename Tuple, typename Stream, size_t ... Is>
+    static void VisitTuple(Tuple&& structure, Stream&& output, std::index_sequence<Is...>) {
         using swallow = int[];
-        (void)swallow{(Visit(std::get<Is>(structure), output), int{})...};
+        (void)swallow{(VisitElement(std::get<Is>(std::forward<Tuple>(structure)), std::forward<Stream>(output)), int{})...};
     }
 
-    template<typename ... Ts, size_t ... Is>
-    static void Visit(const std::tuple<Ts...>& structure, Stream& output, std::index_sequence<Is...>) {
-        using swallow = int[];
-        (void)swallow{(Visit(std::get<Is>(structure), output), int{})...};
-    }
-
-    template<typename ... Ts>
-    static void Visit(std::tuple<Ts...>& structure, Stream& output) {
-        Visit(structure, output, std::make_index_sequence<sizeof...(Ts)>{});
-    }
-
-    template<typename ... Ts>
-    static void Visit(const std::tuple<Ts...>& structure, Stream& output) {
-        Visit(structure, output, std::make_index_sequence<sizeof...(Ts)>{});
+    template<typename Tuple, typename Stream>
+    static void VisitTuple(Tuple&& structure, Stream&& output) {
+        LOG_STEP("Begin tuple.");
+        VisitTuple(std::forward<Tuple>(structure), std::forward<Stream>(output), std::make_index_sequence<std::tuple_size_v<std::remove_reference_t<Tuple>>>{});
+        LOG_STEP("End tuple.");
     }
 };
 
 struct TupleElementWriter {
-    template <typename T>
-    static void VisitSwappedScalar(const T& field, std::ostream& stream) {
-        T copy = field;
-        support::EndianSwap(&copy);
-        stream.write(reinterpret_cast<const char *>(&copy), sizeof(T));
+    template <bool ShouldSwap, typename T, typename = typename std::enable_if<std::is_scalar_v<T>>::type>
+    static void VisitElement(const T& field, std::ostream& stream) {
+        if constexpr (ShouldSwap) {
+            LOG_STEP("Writing swapped scalar type.");
+            T copy = field;
+            support::EndianSwap(&copy);
+            stream.write(reinterpret_cast<const char *>(&copy), sizeof(T));
+        } else {
+            LOG_STEP("Writing non-swapped scalar type.");
+            stream.write(reinterpret_cast<const char *>(&field), sizeof(T));
+        }
     }
 
-    template <typename T>
-    static void VisitScalar(const T& field, std::ostream& stream) {
-        stream.write(reinterpret_cast<const char *>(&field), sizeof(T));
-    }
-
-    template<size_t I>
-    static void VisitCharArray(const std::array<char, I>& field, std::ostream& stream) {
+    template<bool, size_t I>
+    static void VisitElement(const std::array<char, I>& field, std::ostream& stream) {
+        LOG_STEP("Writing char array.");
         stream.write(field.data(), field.size());
+    }
+
+    template <bool>
+    static void VisitElement(const std::string& field, std::ostream& stream) {
+        LOG_STEP("Writing string as null-terminated c string.");
+        stream.write(field.c_str(), field.size() + 1);
     }
 };
 
 struct TupleElementReader {
-    template <typename T>
-    static void VisitSwappedScalar(T& field, std::istream& stream) {
-        stream.read(reinterpret_cast<char *>(&field), sizeof(T));
-        support::EndianSwap(&field);
+    template <bool ShouldSwap, typename T, typename = typename std::enable_if<std::is_scalar_v<T>>::type>
+    static void VisitElement(T& field, std::istream& stream) {
+        if constexpr (ShouldSwap) {
+            LOG_STEP("Reading swapped scalar type.");
+            stream.read(reinterpret_cast<char*>(&field), sizeof(T));
+            support::EndianSwap(&field);
+        } else {
+            LOG_STEP("Reading non-swapped scalar type.");
+            stream.read(reinterpret_cast<char *>(&field), sizeof(T));
+        }
     }
 
-    template <typename T>
-    static void VisitScalar(T& field, std::istream& stream) {
-        stream.read(reinterpret_cast<char *>(&field), sizeof(T));
-    }
-
-    template<size_t I>
-    static void VisitCharArray(std::array<char, I>& field, std::istream& stream) {
+    template<bool, size_t I>
+    static void VisitElement(std::array<char, I>& field, std::istream& stream) {
+        LOG_STEP("Reading char array.");
         stream.read(field.data(), field.size());
+    }
+
+    template <bool>
+    static void VisitElement(std::string& field, std::istream& stream) {
+        LOG_STEP("Reading null-terminated c string as string.");
+        std::getline(stream, field, '\0');
     }
 };
 
@@ -123,44 +129,48 @@ struct TupleElementReader {
 
 namespace serializer {
 
-template<support::Endian Endian, typename Tuple, typename OStream, typename ...Ts>
-void SerializeTuple(const Tuple& structure, OStream& output) {
+template<support::Endian Endian, template<typename...> typename Tuple, typename ... Ts, typename OStream>
+void SerializeTuple(const Tuple<Ts...>& tuple, OStream&& output) {
     using namespace serializer_internal;
-    TupleVisitor<Endian, TupleElementWriter, OStream>::Visit(structure, output);
+    LOG_STEP("Serialize begin.");
+    TupleVisitor<Endian, TupleElementWriter>::VisitTuple(tuple, std::forward<OStream>(output));
+    LOG_STEP("Serialize end.");
 }
 
 template <typename Tuple, typename OStream>
-static void SerializeTuple(const Tuple& tuple, OStream& file, support::Endian endianness) {
+static void SerializeTuple(const Tuple& tuple, OStream&& file, support::Endian endianness) {
     switch (endianness) {
         case support::Endian::big:
-            SerializeTuple<support::Endian::big>(tuple, file);
+            SerializeTuple<support::Endian::big>(tuple, std::forward<OStream>(file));
             break;
         case support::Endian::little:
-            SerializeTuple<support::Endian::big>(tuple, file);
+            SerializeTuple<support::Endian::big>(tuple, std::forward<OStream>(file));
             break;
         case support::Endian::ignore:
-            SerializeTuple<support::Endian::ignore>(tuple, file);
+            SerializeTuple<support::Endian::ignore>(tuple, std::forward<OStream>(file));
             break;
     }
 }
 
-template<support::Endian Endian, typename Tuple, typename IStream, typename ...Ts>
-void DeserializeTuple(Tuple& structure, IStream& input) {
+template<support::Endian Endian, template<typename...> typename Tuple, typename ... Ts, typename IStream>
+void DeserializeTuple(Tuple<Ts...>& structure, IStream&& input) {
     using namespace serializer_internal;
-    TupleVisitor<Endian, TupleElementReader, IStream>::Visit(structure, input);
+    LOG_STEP("Deserialize begin.");
+    TupleVisitor<Endian, TupleElementReader>::VisitTuple(structure, std::forward<IStream>(input));
+    LOG_STEP("Deserialize end.");
 }
 
 template <typename Tuple, typename IStream>
-static void DeserializeTuple(const Tuple& tuple, IStream& file, support::Endian endianness) {
+static void DeserializeTuple(Tuple& tuple, IStream&& file, support::Endian endianness) {
     switch (endianness) {
         case support::Endian::big:
-            DeserializeTuple<support::Endian::big>(tuple, file);
+            DeserializeTuple<support::Endian::big>(tuple, std::forward<IStream>(file));
             break;
         case support::Endian::little:
-            DeserializeTuple<support::Endian::big>(tuple, file);
+            DeserializeTuple<support::Endian::big>(tuple, std::forward<IStream>(file));
             break;
         case support::Endian::ignore:
-            DeserializeTuple<support::Endian::ignore>(tuple, file);
+            DeserializeTuple<support::Endian::ignore>(tuple, std::forward<IStream>(file));
             break;
     }
 }
