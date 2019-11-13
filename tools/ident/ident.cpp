@@ -59,7 +59,7 @@ int main(int argc, const char* argv[])
 
     // read entire module to memory
     file.seekg(0);
-    auto module_raw = std::make_unique<char>(header->Size()); // TODO: size could be wrong if incorrect in module
+    auto module_raw = std::make_unique<char[]>(header->Size()); // TODO: size could be wrong if incorrect in module
     file.read(module_raw.get(), header->Size());
 
     Module module(header, std::move(module_raw));

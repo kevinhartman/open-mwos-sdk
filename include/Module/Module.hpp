@@ -29,6 +29,7 @@
 
 #include <cstdio>
 #include <string>
+#include <utility>
 
 #include "ModuleHeader.hpp"
 
@@ -36,7 +37,7 @@ namespace module {
 
 class Module {
 public:
-    Module(std::shared_ptr<ModuleHeader> header, std::unique_ptr<char> raw_module): header(std::move(header)), raw_module(std::move(raw_module)) {}
+    Module(std::shared_ptr<ModuleHeader> header, std::unique_ptr<char[]> raw_module): header(std::move(header)), raw_module(std::move(raw_module)) {}
 
     inline std::shared_ptr<ModuleHeader> GetHeader() {
         return header;
@@ -52,7 +53,7 @@ public:
 
 private:
     std::shared_ptr<ModuleHeader> header;
-    std::unique_ptr<char> raw_module;
+    std::unique_ptr<char[]> raw_module;
 };
 
 }
