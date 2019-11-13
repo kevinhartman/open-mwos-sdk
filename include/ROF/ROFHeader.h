@@ -65,7 +65,8 @@ using SerializableROFHeader = SerializableStruct<
     SerializableArray<char, 6>,
     uint16_t,
     SequenceOfType<uint32_t, 11>,
-    SequenceOfType<uint16_t, 3>
+    SequenceOfType<uint16_t, 3>,
+    SerializableString
 >;
 
 struct ROFHeader : SerializableROFHeader {
@@ -98,8 +99,7 @@ struct ROFHeader : SerializableROFHeader {
 
     __deprecated_msg("Reserved.")
     auto& HeaderExpansion() { return std::get<20>(*this); }
-
-    // Note: null-terminated variable length module name immediately follows header.
+    auto& Name() { return std::get<21>(*this); }
 };
 
 }

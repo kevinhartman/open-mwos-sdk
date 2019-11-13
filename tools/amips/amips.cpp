@@ -19,9 +19,9 @@ int main() {
     }
 
     rof::ROFObjectFile rof;
-    rof.SetName("mockrof");
     rof.GetHeader().SyncBytes() = { 0xA, 0xB, 0xC, 0xD};
     rof.GetHeader().AsmVersion() = 2;
+    rof.GetHeader().Name() = "mockrof";
 
     rof::ROFWriter writer(constants::AssemblerVersion, support::Endian::big);
     writer.Write(rof, file);

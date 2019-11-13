@@ -1,7 +1,8 @@
 #pragma once
 
-#include <tuple>
 #include <array>
+#include <tuple>
+#include <string>
 
 namespace serializer_internal {
 template<typename ... T>
@@ -46,14 +47,16 @@ struct struct_gen<std::tuple<Ts...>> {
 };
 }
 
-template <typename ... Ts>
-using SerializableStruct = typename serializer_internal::struct_gen<std::tuple<>, Ts...>::type;
+template<typename ... Ts>
+using SerializableStruct = typename ::serializer_internal::struct_gen<std::tuple<>, Ts...>::type;
 
-template <typename T, size_t N>
+template<typename T, size_t N>
 using SerializableArray = std::array<T, N>;
 
-template <typename T, size_t N>
-using SequenceOfType = typename serializer_internal::type_sequence_gen<N>::template type<T>;
+using SerializableString = std::basic_string<char>;
 
-template <size_t N>
+template<typename T, size_t N>
+using SequenceOfType = typename ::serializer_internal::type_sequence_gen<N>::template type<T>;
+
+template<size_t N>
 using PadBytes = std::array<char, N>;

@@ -25,14 +25,6 @@ public:
         return header;
     }
 
-    inline std::string GetName() const {
-        return nam;
-    }
-
-    inline void SetName(std::string nam) {
-        this->nam = nam;
-    }
-
     inline const PSect& GetPSect() const {
         return psect;
     }
@@ -45,7 +37,6 @@ public:
 
 private:
     ROFHeader header;
-    std::string nam;
     PSect psect;
     std::vector<VSect> vsects; // Vsect outside of PSect is unlikely, but possible
 };
