@@ -4,7 +4,6 @@
 #include "amips.h"
 
 #include "ROFObjectFile.h"
-#include "ROFWriter.h"
 #include "Endian.h"
 
 int main() {
@@ -19,12 +18,12 @@ int main() {
     }
 
     rof::ROFObjectFile rof;
+    rof.SetCompilerVersion(constants::AssemblerVersion);
     rof.GetHeader().SyncBytes() = { 0xA, 0xB, 0xC, 0xD};
     rof.GetHeader().AsmVersion() = 2;
     rof.GetHeader().Name() = "mockrof";
 
-    rof::ROFWriter writer(constants::AssemblerVersion, support::Endian::big);
-    writer.Write(rof, file);
+    rof.Write(file, support::Endian::big);
 
     return 0;
 }
