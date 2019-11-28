@@ -1,15 +1,17 @@
-#include "Parser.h"
+#include "InputFileParser.h"
 
 #include <istream>
 #include <optional>
 #include <string>
 #include <regex>
 
-const std::vector<Entry>& Parser::GetListing() const {
+namespace assembler {
+
+const std::vector<Entry>& InputFileParser::GetListing() const {
     return listing;
 }
 
-bool Parser::ParseComment(const std::string& line, Entry& entry) const {
+bool InputFileParser::ParseComment(const std::string& line, Entry& entry) const {
     const std::regex comment(R"(^\*)");
 
     if (std::regex_search(line, comment)) {
@@ -20,17 +22,17 @@ bool Parser::ParseComment(const std::string& line, Entry& entry) const {
     return false;
 }
 
-bool Parser::ParseBlank(const std::string& line) const {
+bool InputFileParser::ParseBlank(const std::string& line) const {
     const std::regex blank(R"(\s*)");
     return std::regex_match(line, blank);
 }
 
-std::string Parser::ParseSeparator(const std::string& line) const {
+std::string InputFileParser::ParseSeparator(const std::string& line) const {
     const std::regex field_separator(R"(^(\t|\ )+)");
     return std::regex_replace(line, field_separator, "");
 }
 
-std::string Parser::ParseLabel(const std::string& line, Entry& entry) const {
+std::string InputFileParser::ParseLabel(const std::string& line, Entry& entry) const {
     const std::regex field_separator(R"(^(\t|\ )+)");
     const std::regex label_designator("^=");
     const std::regex label("^[A-Za-z@_][A-Za-z0-9@_$.]*"); // symbolic name
@@ -45,9 +47,8 @@ std::string Parser::ParseLabel(const std::string& line, Entry& entry) const {
         expect_label = true;
     }
 
-    std::smatch matches {};
-    if (std::regex_search(rest, matches, label))
-    {
+    std::smatch matches{};
+    if (std::regex_search(rest, matches, label)) {
         // Label detected
         Label entry_label;
         entry_label.name = matches[0];
@@ -57,16 +58,12 @@ std::string Parser::ParseLabel(const std::string& line, Entry& entry) const {
         if (std::regex_search(rest, label_global_terminator)) {
             entry_label.is_global = true;
             rest = std::regex_replace(rest, label_global_terminator, "");
-        }
-        else
-        {
+        } else {
             entry_label.is_global = false;
         }
 
         entry.label.emplace(entry_label);
-    }
-    else
-    {
+    } else {
         if (expect_label) throw InvalidLabelException("Expected valid label after label designator (=). Got: " + rest);
     }
 
@@ -79,11 +76,11 @@ std::string Parser::ParseLabel(const std::string& line, Entry& entry) const {
     return rest;
 }
 
-std::string Parser::ParseOperation(const std::string& line, Entry& entry) const {
+std::string InputFileParser::ParseOperation(const std::string& line, Entry& entry) const {
     // TODO: make sure this matches only non-space, non-special chars
     const std::regex operation(R"(^\S+)");
 
-    std::smatch matches {};
+    std::smatch matches{};
     if (std::regex_search(line, matches, operation)) {
         entry.operation = matches[0];
         return std::regex_replace(line, operation, "");
@@ -93,11 +90,11 @@ std::string Parser::ParseOperation(const std::string& line, Entry& entry) const 
     return line;
 }
 
-std::string Parser::ParseOperands(const std::string& line, Entry& entry) const {
+std::string InputFileParser::ParseOperands(const std::string& line, Entry& entry) const {
     // TODO: make sure this matches only non-space, non-special chars
     const std::regex operands(R"(^\S+)");
 
-    std::smatch matches {};
+    std::smatch matches{};
     if (std::regex_search(line, matches, operands)) {
         entry.operands = matches[0];
         return std::regex_replace(line, operands, "");
@@ -107,7 +104,7 @@ std::string Parser::ParseOperands(const std::string& line, Entry& entry) const {
     return line;
 }
 
-void Parser::Parse(std::istream& lines) {
+void InputFileParser::Parse(std::istream& lines) {
     std::string line;
     while (std::getline(lines, line)) {
         if (ParseBlank(line)) {
@@ -135,7 +132,9 @@ void Parser::Parse(std::istream& lines) {
             throw UnexpectedTokenException("Expected end of line. Instead, got: " + line);
         }
 
-    done:
+        done:
         listing.emplace_back(entry);
     }
+}
+
 }

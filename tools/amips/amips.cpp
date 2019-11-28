@@ -3,7 +3,7 @@
 
 #include "amips.h"
 
-#include "Parser.h"
+#include "InputFileParser.h"
 #include "ROFObjectFile.h"
 #include "Endian.h"
 
@@ -18,7 +18,7 @@ int main(int argc, const char* argv[]) {
         exit(1);
     }
 
-    Parser parser {};
+    assembler::InputFileParser parser {};
     parser.Parse(in_file);
 
     // create fake ROF for now
