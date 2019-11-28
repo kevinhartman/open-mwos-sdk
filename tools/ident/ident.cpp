@@ -35,7 +35,7 @@
 #include "ModuleUtils.hpp"
 #include "ModuleInfoPrinter.hpp"
 
-#include "TupleSerialization.h"
+#include "Serialization.h"
 
 using namespace module;
 
@@ -55,7 +55,7 @@ int main(int argc, const char* argv[])
     file.seekg(0);
     auto header = std::make_shared<ModuleHeader>();
     auto serializable = static_cast<SerializableModuleHeader*>(header.get());
-    serializer::DeserializeTuple<support::Endian::big>(*serializable, file);
+    serializer::Deserialize<support::Endian::big>(*serializable, file);
 
     // read entire module to memory
     file.seekg(0);
