@@ -41,11 +41,11 @@ private:
 
 // TODO: add proper messages using some sort of string concatenation
 struct InvalidLabelException : public std::runtime_error {
-    InvalidLabelException(const std::string& label) : runtime_error(label) {}
+    explicit InvalidLabelException(const std::string& label) : runtime_error(label) {}
 };
 
 struct UnexpectedTokenException : public std::runtime_error {
-    UnexpectedTokenException(const std::string& token) : runtime_error(token) {}
+    explicit UnexpectedTokenException(const std::string& token) : runtime_error(token) {}
 };
 
 }
