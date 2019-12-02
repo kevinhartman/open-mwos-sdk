@@ -51,8 +51,6 @@ void print_listing(const std::vector<Entry>& listing) {
 SCENARIO("Input lines are properly parsed", "[parser]") {
 
     GIVEN("Each input line") {
-        LineToEntry test = { "", { std::optional<Label>({ "", true }), "", "", "" }};
-
         auto pair = GENERATE(values<LineToEntry>({
             // Local label, all fields provided.
             {
@@ -224,6 +222,16 @@ SCENARIO("Input lines are properly parsed", "[parser]") {
                     std::nullopt
                 }
             },
+            // Operands with expression including * (current code loc).
+            {
+                "=label:    lw    $1,label-*($2)    *load word at $2 into $1",
+                {
+                    std::optional<Label>({ "label", true }),
+                    "lw",
+                    "$1,label-*($2)",
+                    "load word at $2 into $1"
+                }
+            }
         }));
 
         // Prepare stream with input line.
