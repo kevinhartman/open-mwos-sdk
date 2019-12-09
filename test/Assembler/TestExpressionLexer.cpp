@@ -138,60 +138,82 @@ SCENARIO("Valid expressions are properly tokenized", "[lexer]") {
             {
                 "*",
                 {
-                    { TokenType::Asterisk, "*" }
+                    { TokenType::Asterisk,         "*" }
                 }
             },
             {
                 "/",
                 {
-                    { TokenType::ForwardSlash, "/" }
+                    { TokenType::ForwardSlash,      "/" }
                 }
             },
             {
                 "+",
                 {
-                    { TokenType::Plus, "+" }
+                    { TokenType::Plus,              "+" }
                 }
             },
             {
-                "<",
+                "<<",
                 {
-                    { TokenType::LeftCarrot, "<" }
+                    { TokenType::DoubleLeftCarrot,  "<<" }
                 }
             },
             {
-                ">",
+                ">>",
                 {
-                    { TokenType::RightCarrot, ">" }
+                    { TokenType::DoubleRightCarrot, ">>" }
                 }
             },
             {
                 "(",
                 {
-                    { TokenType::LeftParen, "(" }
+                    { TokenType::LeftParen,         "(" }
                 }
             },
             {
                 ")",
                 {
-                    { TokenType::RightParen, ")" }
+                    { TokenType::RightParen,        ")" }
+                }
+            },
+            {
+                "hi(5)",
+                {
+                    { TokenType::SymbolicName,     "hi" },
+                    { TokenType::LeftParen,        "(" },
+                    { TokenType::DecimalConstant,  "5" },
+                    { TokenType::RightParen,       ")" },
+                }
+            },
+            {
+                "(hi(5))",
+                {
+                    { TokenType::LeftParen,        "(" },
+                    { TokenType::SymbolicName,     "hi" },
+                    { TokenType::LeftParen,        "(" },
+                    { TokenType::DecimalConstant,  "5" },
+                    { TokenType::RightParen,       ")" },
+                    { TokenType::RightParen,       ")" }
                 }
             },
             {
                 "5+0xDEADBEEF",
                 {
-                    { TokenType::DecimalConstant, "5" },
+                    { TokenType::DecimalConstant,   "5" },
                     { TokenType::Plus, "+" },
                     { TokenType::HexConstant, "0xDEADBEEF" }
                 }
             },
             {
-                "$1A*(%00110+_hello)",
+                "$1A*(%00110>>0x4+_hello)",
                 {
                     { TokenType::HexConstant, "$1A" },
                     { TokenType::Asterisk, "*" },
                     { TokenType::LeftParen, "(" },
                     { TokenType::BinaryConstant, "%00110" },
+                    { TokenType::DoubleRightCarrot, ">>" },
+                    { TokenType::HexConstant, "0x4" },
                     { TokenType::Plus, "+" },
                     { TokenType::SymbolicName, "_hello" },
                     { TokenType::RightParen, ")" }
@@ -247,6 +269,8 @@ SCENARIO("Malformed expressions cause the proper lexer failure", "[lexer]") {
             { "`", 0 },
             { " 8+2", 0 },
             { "label+ 5", 2 },
+            { "label+5>4", 3 },
+            { "10<4", 1 },
             { " ", 0}
         }));
 

@@ -2,7 +2,6 @@
 
 #include <regex>
 #include <string>
-#include <vector>
 
 namespace assembler {
 
@@ -28,10 +27,10 @@ ExpressionLexer::ExpressionLexer(std::string expression): expression(std::move(e
         { std::regex(R"(^\*)"), TokenType::Asterisk },
         { std::regex(R"(^/)"), TokenType::ForwardSlash },
         { std::regex(R"(^\+)"), TokenType::Plus },
-        { std::regex(R"(^<)"), TokenType::LeftCarrot },
-        { std::regex(R"(^>)"), TokenType::RightCarrot },
-        { std::regex(R"(\()"), TokenType::LeftParen },
-        { std::regex(R"(\))"), TokenType::RightParen }
+        { std::regex(R"(^<<)"), TokenType::DoubleLeftCarrot },
+        { std::regex(R"(^>>)"), TokenType::DoubleRightCarrot },
+        { std::regex(R"(^\()"), TokenType::LeftParen },
+        { std::regex(R"(^\))"), TokenType::RightParen }
     }){}
 
 bool ExpressionLexer::HasNext() const {

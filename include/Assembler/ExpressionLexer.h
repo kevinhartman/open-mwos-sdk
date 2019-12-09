@@ -25,8 +25,8 @@ enum TokenType {
     Asterisk,
     ForwardSlash,
     Plus,
-    LeftCarrot,
-    RightCarrot,
+    DoubleLeftCarrot,
+    DoubleRightCarrot,
 
     LeftParen,
     RightParen
