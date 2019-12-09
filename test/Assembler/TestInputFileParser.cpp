@@ -4,7 +4,7 @@
 #include "InputFileParser.h"
 
 #include <iostream>
-#include <strstream>
+#include <sstream>
 #include <vector>
 #include <tuple>
 
@@ -235,7 +235,7 @@ SCENARIO("Input lines are properly parsed", "[parser]") {
         }));
 
         // Prepare stream with input line.
-        std::strstream input{};
+        std::stringstream input{};
         input << pair.input_line;
 
         WHEN("the line is parsed") {
@@ -309,7 +309,7 @@ SCENARIO("Invalid input lines properly fail", "[parser]") {
         }));
 
         // Prepare stream with input line.
-        std::strstream input{};
+        std::stringstream input{};
         input << pair.input_line;
 
         WHEN("the line is parsed") {
@@ -346,7 +346,7 @@ SCENARIO("Invalid input lines properly fail", "[parser]") {
         }));
 
         // Prepare stream with input line.
-        std::strstream input{};
+        std::stringstream input{};
         input << pair.input_line;
 
         WHEN("the line is parsed") {
