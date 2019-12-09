@@ -3,7 +3,8 @@ find_package(Catch2 REQUIRED)
 add_executable(test-toolchain-libs
         test-toolchain-libs.cpp
         Assembler/TestInputFileParser.cpp
-        Assembler/TestExpressionLexer.cpp)
+        Assembler/TestExpressionLexer.cpp
+        Assembler/TestExpressionParser.cpp)
 
 target_link_libraries(test-toolchain-libs PRIVATE
         Assembler

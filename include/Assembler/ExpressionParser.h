@@ -1,15 +1,22 @@
 #pragma once
 
+#include "Expression.h"
+#include "ExpressionLexer.h"
+
+#include <map>
 #include <string>
 
 namespace assembler {
 
-class Expression;
-
 class ExpressionParser {
 public:
-    ExpressionParser() = default;
-    bool Parse(const std::string& expression, Expression& out);
+    explicit ExpressionParser(ExpressionLexer lexer);
+    std::unique_ptr<Expression> Parse();
+    std::unique_ptr<Expression> Parse(size_t precedence);
+    void Consume(TokenType expected_token_type);
+
+private:
+    ExpressionLexer lexer;
 };
 
 }
