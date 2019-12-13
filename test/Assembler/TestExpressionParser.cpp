@@ -78,7 +78,7 @@ struct PrintExpressionVisitor : ExpressionVisitor {
         PrintExpressionVisitor visitor {};
         left.Accept(visitor);
 
-        result << op << visitor.result.str();
+        result << "(" << op << visitor.result.str() << ")";
     }
 
     void Visit(const NegationExpression& expr) override {
@@ -96,7 +96,7 @@ struct PrintExpressionVisitor : ExpressionVisitor {
         PrintExpressionVisitor v_right {};
         right.Accept(v_right);
 
-        result << v_left.result.str() << op << v_right.result.str();
+        result << "(" << v_left.result.str() << op << v_right.result.str() << ")";
     }
 
     void Visit(const BitwiseAndExpression& expr) override {
@@ -150,7 +150,7 @@ std::ostream& operator<<(std::ostream& os, const Expression& expr) {
     return os;
 }
 
-SCENARIO("Valid expressions are properly parsed", "[parser]") {
+SCENARIO("Valid expressions are properly parsed", "[expression]") {
     GIVEN("each expression string") {
         auto pair = GENERATE(values<StringToExpression>({
             {
@@ -178,6 +178,104 @@ SCENARIO("Valid expressions are properly parsed", "[parser]") {
                     ),
                     std::make_unique<NumericConstantExpression>(2)
                 )
+            },
+            {
+                // Test subexpression / grouping.
+                "5*(10+2)",
+                std::make_shared<MultiplicationExpression>(
+                    std::make_unique<NumericConstantExpression>(5),
+                    std::make_unique<AdditionExpression>(
+                        std::make_unique<NumericConstantExpression>(10),
+                        std::make_unique<NumericConstantExpression>(2)
+                    )
+                )
+            },
+            {
+                // Test negation prefix expression.
+                "-5",
+                std::make_shared<NegationExpression>(
+                    std::make_unique<NumericConstantExpression>(5)
+                )
+            },
+            {
+                // Test double-negation prefix expression.
+                "--5",
+                std::make_shared<NegationExpression>(
+                    std::make_unique<NegationExpression>(
+                        std::make_unique<NumericConstantExpression>(5)
+                    )
+                )
+            },
+            {
+                // Test subtraction of negated expression.
+                "0xAFF--2",
+                std::make_shared<SubtractionExpression>(
+                    std::make_unique<NumericConstantExpression>(0xAFF),
+                    std::make_unique<NegationExpression>(
+                        std::make_unique<NumericConstantExpression>(2)
+                    )
+                )
+            },
+            {
+                // Test prefix precedence.
+                "-5*10",
+                std::make_shared<MultiplicationExpression>(
+                    std::make_unique<NegationExpression>(
+                        std::make_unique<NumericConstantExpression>(5)
+                    ),
+                    std::make_unique<NumericConstantExpression>(10)
+                )
+            },
+            {
+                // Test nested groups don't impact func-like operators.
+                // Note: this might not work in real OS9 asm expressions, but it works in C!
+                "((((high))))(((((label)))))",
+                std::make_shared<HighExpression>(
+                    std::make_unique<ReferenceExpression>("high"),
+                    std::make_unique<ReferenceExpression>("label")
+                )
+            },
+            {
+                // Test precedence overrides despite natural right-associativity.
+                "-hi(123)|lo(123)^^high(1)*3/%011+label1-label2<<3>>3",
+                std::make_shared<LogicalRightShiftExpression>(
+                    std::make_unique<LogicalLeftShiftExpression>(
+                        std::make_unique<SubtractionExpression>(
+                            std::make_unique<AdditionExpression>(
+                                std::make_unique<DivisionExpression>(
+                                    std::make_unique<MultiplicationExpression>(
+                                        std::make_unique<BitwiseXorExpression>(
+                                            std::make_unique<BitwiseOrExpression>(
+                                                std::make_unique<NegationExpression>(
+                                                    std::make_unique<HiExpression>(
+                                                        std::make_unique<ReferenceExpression>("hi"),
+                                                        std::make_unique<NumericConstantExpression>(123)
+                                                    )
+                                                ),
+                                                std::make_unique<LoExpression>(
+                                                    std::make_unique<ReferenceExpression>("lo"),
+                                                    std::make_unique<NumericConstantExpression>(123)
+                                                )
+                                            ),
+                                            std::make_unique<BitwiseNotExpression>(
+                                                std::make_unique<HighExpression>(
+                                                    std::make_unique<ReferenceExpression>("high"),
+                                                    std::make_unique<NumericConstantExpression>(1)
+                                                )
+                                            )
+                                        ),
+                                        std::make_unique<NumericConstantExpression>(3)
+                                    ),
+                                    std::make_unique<NumericConstantExpression>(0b011)
+                                ),
+                                std::make_unique<ReferenceExpression>("label1")
+                            ),
+                            std::make_unique<ReferenceExpression>("label2")
+                        ),
+                        std::make_unique<NumericConstantExpression>(3)
+                    ),
+                    std::make_unique<NumericConstantExpression>(3)
+                )
             }
         }));
 
@@ -189,6 +287,81 @@ SCENARIO("Valid expressions are properly parsed", "[parser]") {
 
             THEN("the expression tree is correct") {
                 REQUIRE(*expression == *pair.expected_expression);
+            }
+        }
+    }
+}
+
+SCENARIO("Unsatisfied expression contexts throw", "[expression]") {
+    GIVEN("each expression string") {
+        auto input_expression = GENERATE(values<std::string>({
+            // Test empty expressions
+            "",
+            "()",
+            "5+hello*()",
+            "",
+            "hi()",
+            "-lo()",
+            "6+high()",
+
+            // Test invalid prefix
+            "+",
+            "(+)",
+            "<<4",
+
+            // Test prefix followed by missing expression
+            "(-)",
+            "(^)",
+            "(~)",
+
+            // Test infix with invalid right expression
+            "5++2",
+            "4*",
+        }));
+
+        WHEN("the expression is parsed") {
+            ExpressionLexer lexer(input_expression);
+            ExpressionParser parser(lexer);
+
+            THEN("ExpectedExpressionException is thrown") {
+                REQUIRE_THROWS_AS(parser.Parse(), ExpectedExpressionException);
+            }
+        }
+    }
+}
+
+SCENARIO("Unsatisfied token contexts throw", "[expression]") {
+    GIVEN("each expression string") {
+        auto input_expression = GENERATE(values<std::string>({
+            "4hello",
+            "(5+(45)3)"
+        }));
+
+        WHEN("the expression is parsed") {
+            ExpressionLexer lexer(input_expression);
+            ExpressionParser parser(lexer);
+
+            THEN("ExpectedTokenException is thrown") {
+                REQUIRE_THROWS_AS(parser.Parse(), ExpectedTokenException);
+            }
+        }
+    }
+}
+
+SCENARIO("Expressions with invalid func-like operators throw", "[expression]") {
+    GIVEN("each expression string") {
+        auto input_expression = GENERATE(values<std::string>({
+            "hello(34)",
+            "(5+(45))(label)",
+            "5(5)"
+        }));
+
+        WHEN("the expression is parsed") {
+            ExpressionLexer lexer(input_expression);
+            ExpressionParser parser(lexer);
+
+            THEN("InvalidFuncLikeOperatorException is thrown") {
+                REQUIRE_THROWS_AS(parser.Parse(), InvalidFuncLikeOperatorException);
             }
         }
     }

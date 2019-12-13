@@ -31,7 +31,7 @@ struct HexConstantParselet : PrefixParselet {
 
 struct BinaryConstantParselet : PrefixParselet {
     std::unique_ptr<Expression> Parse(ExpressionParser& parser, Token token) const override {
-        const std::regex binary_designator(R"(^\${1})");
+        const std::regex binary_designator(R"(^\%{1})");
         auto without_prefix = std::regex_replace(token.text, binary_designator, "");
 
         return std::make_unique<NumericConstantExpression>(std::stoul(without_prefix, nullptr, 2));
@@ -79,27 +79,27 @@ struct FuncLikeOperatorParselet : InfixParselet {
     std::unique_ptr<Expression> Parse(ExpressionParser& parser, std::unique_ptr<Expression> left, Token token) const override {
         auto left_as_reference = dynamic_cast<ReferenceExpression*>(left.get());
         if (left_as_reference == nullptr) {
-            throw "exception"; // TODO: proper exception type
+            throw InvalidFuncLikeOperatorException("[non-reference expression]");
         }
 
         std::unique_ptr<Expression> expression;
         if (left_as_reference->value == "hi") {
             expression = std::make_unique<HiExpression>(
-                std::move(left), std::move(parser.Parse(GetPrecedence())));
+                std::move(left), std::move(parser.Parse(0)));
         }
 
         if (left_as_reference->value == "high") {
             expression = std::make_unique<HighExpression>(
-                std::move(left), std::move(parser.Parse(GetPrecedence())));
+                std::move(left), std::move(parser.Parse(0)));
         }
 
         if (left_as_reference->value == "lo") {
             expression = std::make_unique<LoExpression>(
-                std::move(left), std::move(parser.Parse(GetPrecedence())));
+                std::move(left), std::move(parser.Parse(0)));
         }
 
         if (!expression) {
-            throw "exception"; // TODO: proper exception type
+            throw InvalidFuncLikeOperatorException(left_as_reference->value);
         }
 
         parser.Consume(TokenType::RightParen);
@@ -114,9 +114,12 @@ struct FuncLikeOperatorParselet : InfixParselet {
 
 template<typename TExpression>
 struct PrefixOperatorParselet : PrefixParselet {
+    PrefixOperatorParselet(size_t precedence) : precedence(precedence) {}
     std::unique_ptr<Expression> Parse(ExpressionParser& parser, Token token) const override {
-        return std::make_unique<TExpression>(parser.Parse(0)); // TODO: is prefix precedence needed?
+        return std::make_unique<TExpression>(parser.Parse(precedence));
     }
+
+    size_t precedence;
 };
 
 struct GroupParselet : PrefixParselet {
@@ -138,9 +141,9 @@ const std::map<TokenType, std::shared_ptr<PrefixParselet>> prefix_parslets {
     { Period, std::make_shared<ReferenceParselet>() },
     { Asterisk, std::make_shared<ReferenceParselet>() },
 
-    { Minus, std::make_shared<PrefixOperatorParselet<NegationExpression>>() },
-    { Tilde, std::make_shared<PrefixOperatorParselet<BitwiseNotExpression>>() },
-    { Hat, std::make_shared<PrefixOperatorParselet<BitwiseNotExpression>>() },
+    { Minus, std::make_shared<PrefixOperatorParselet<NegationExpression>>(19) },
+    { Tilde, std::make_shared<PrefixOperatorParselet<BitwiseNotExpression>>(19) },
+    { Hat, std::make_shared<PrefixOperatorParselet<BitwiseNotExpression>>(19) },
 
     { LeftParen, std::make_shared<GroupParselet>() }
 };
@@ -172,15 +175,35 @@ std::optional<size_t> GetInfixPrecedence(TokenType token_type) {
     return infix_iterator->second->GetPrecedence();
 }
 
-ExpressionParser::ExpressionParser(ExpressionLexer lexer) : lexer(std::move(lexer)) {}
+ExpressionParser::ExpressionParser(ExpressionLexer lexer) : lexer(std::move(lexer)) {
+    initial_expr_string = this->lexer.GetTokenStream();
+}
 
 std::unique_ptr<Expression> ExpressionParser::Parse() {
-    return Parse(0);
+    auto result = Parse(0);
+    if (lexer.HasNext()) {
+        Token next_token;
+        lexer = lexer.Next(next_token);
+
+        throw ExpectedTokenException("[end of expression]", next_token.text, PrintCurrentExprContext());
+    }
+
+    return result;
+}
+
+size_t ExpressionParser::GetCurrentTokenIndex() const {
+    return initial_expr_string.length() - lexer.GetTokenStream().length();
+}
+
+std::string ExpressionParser::PrintCurrentExprContext() const {
+    auto spacing = std::string(GetCurrentTokenIndex() == 0 ? 0 : GetCurrentTokenIndex() - 1, ' ');
+    auto annotation_text = spacing + "^";
+    return initial_expr_string + "\n" + annotation_text;
 }
 
 std::unique_ptr<Expression> ExpressionParser::Parse(size_t precedence) {
     if (!lexer.HasNext()) {
-        throw "exception"; // TODO: replace
+        throw ExpectedExpressionException("", PrintCurrentExprContext());
     }
 
     Token next_token;
@@ -189,7 +212,7 @@ std::unique_ptr<Expression> ExpressionParser::Parse(size_t precedence) {
     auto prefix_iterator = prefix_parslets.find(next_token.type);
     if (prefix_iterator == prefix_parslets.end()) {
         // Couldn't find suitable prefix parselet.
-        throw "exception"; // TODO: replace
+        throw ExpectedExpressionException(next_token.text, PrintCurrentExprContext());
     }
 
     const PrefixParselet& prefix_parselet = *prefix_iterator->second;
@@ -197,6 +220,10 @@ std::unique_ptr<Expression> ExpressionParser::Parse(size_t precedence) {
 
     if (lexer.HasNext()) {
         auto infix_lexer = lexer.Next(next_token);
+
+        // Note: it's not an error if this token isn't an infix operator (i.e. GetInfixPrecedence yields nullopt)
+        // because this token may be part of a multi-column operator (e.g. "hi(expr)", where the operand and operator
+        // are intermixed, in which case we'll get here with ')' ).
         while(precedence < GetInfixPrecedence(next_token.type).value_or(0)) {
             // We are parsing an infix expression, so we keep the advanced lexer.
             lexer = infix_lexer;
@@ -218,17 +245,15 @@ std::unique_ptr<Expression> ExpressionParser::Parse(size_t precedence) {
 
 void ExpressionParser::Consume(TokenType expected_token_type) {
     if (!lexer.HasNext()) {
-        throw "exception"; // TODO: proper exception type
+        throw ExpectedTokenException("ID:" + std::to_string(expected_token_type), "", PrintCurrentExprContext());
     }
 
     Token token;
-    auto lexer_next = lexer.Next(token);
+    lexer = lexer.Next(token);
 
     if (token.type != expected_token_type) {
-        throw "exception"; // TODO: proper exception type
+        throw ExpectedTokenException("ID:" + std::to_string(expected_token_type), token.text, PrintCurrentExprContext());
     }
-
-    lexer = lexer_next;
 }
 
 }

@@ -42,6 +42,7 @@ public:
     explicit ExpressionLexer(std::string expression);
     ExpressionLexer Next(Token& token) const;
     bool HasNext() const;
+    std::string GetTokenStream() const;
 
 private:
     std::string expression;

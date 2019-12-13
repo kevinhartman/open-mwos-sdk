@@ -37,6 +37,10 @@ bool ExpressionLexer::HasNext() const {
     return !expression.empty();
 }
 
+std::string ExpressionLexer::GetTokenStream() const {
+    return expression;
+}
+
 ExpressionLexer ExpressionLexer::Next(assembler::Token& token) const {
     if (!HasNext()) throw TokensExhaustedException();
 
