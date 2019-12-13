@@ -158,6 +158,26 @@ SCENARIO("Valid expressions are properly parsed", "[expression]") {
                 std::make_shared<NumericConstantExpression>(0)
             },
             {
+                // Test max value decimal.
+                "4294967295",
+                std::make_shared<NumericConstantExpression>(4294967295)
+            },
+            {
+                // Test max value hex.
+                "0xFFFFFFFF",
+                std::make_shared<NumericConstantExpression>(0xFFFFFFFF)
+            },
+            {
+                // Test max value hex.
+                "$FFFFFFFF",
+                std::make_shared<NumericConstantExpression>(0xFFFFFFFF)
+            },
+            {
+                // Test max value bin.
+                "%11111111111111111111111111111111",
+                std::make_shared<NumericConstantExpression>(0b11111111111111111111111111111111)
+            },
+            {
                 // Test multiplication precedence.
                 "5+10*2",
                 std::make_shared<AdditionExpression>(
@@ -362,6 +382,27 @@ SCENARIO("Expressions with invalid func-like operators throw", "[expression]") {
 
             THEN("InvalidFuncLikeOperatorException is thrown") {
                 REQUIRE_THROWS_AS(parser.Parse(), InvalidFuncLikeOperatorException);
+            }
+        }
+    }
+}
+
+SCENARIO("Expressions out of range numeric values throw", "[expression]") {
+    GIVEN("each expression string") {
+        auto input_expression = GENERATE(values<std::string>({
+            // Only possible to test this with decimal, since the Lexer cannot produce out of range
+            // numeric tokens for any other n-ary.
+            "4294967296",
+            "004294967296",
+            "900000000000"
+        }));
+
+        WHEN("the expression is parsed") {
+            ExpressionLexer lexer(input_expression);
+            ExpressionParser parser(lexer);
+
+            THEN("NumericExpressionOutOfRangeException is thrown") {
+                REQUIRE_THROWS_AS(parser.Parse(), NumericExpressionOutOfRangeException);
             }
         }
     }

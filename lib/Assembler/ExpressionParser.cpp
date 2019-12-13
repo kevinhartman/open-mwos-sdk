@@ -13,19 +13,27 @@ struct PrefixParselet {
 };
 
 struct DecimalConstantParselet : PrefixParselet {
-    // TODO: check overflow
     std::unique_ptr<Expression> Parse(ExpressionParser& parser, Token token) const override {
-        return std::make_unique<NumericConstantExpression>(std::stoul(token.text));
+        auto as_ulong = std::stoul(token.text);
+        if (as_ulong > std::numeric_limits<uint32_t>::max()) {
+            throw NumericExpressionOutOfRangeException(token.text);
+        }
+
+        return std::make_unique<NumericConstantExpression>(as_ulong);
     }
 };
 
 struct HexConstantParselet : PrefixParselet {
-    // TODO: check overflow
     std::unique_ptr<Expression> Parse(ExpressionParser& parser, Token token) const override {
         const std::regex hex_designator(R"(^(0x|\$){1})");
         auto without_prefix = std::regex_replace(token.text, hex_designator, "");
 
-        return std::make_unique<NumericConstantExpression>(std::stoul(without_prefix, nullptr, 16));
+        auto as_ulong = std::stoul(without_prefix, nullptr, 16);
+        if (as_ulong > std::numeric_limits<uint32_t>::max()) {
+            throw NumericExpressionOutOfRangeException(token.text);
+        }
+
+        return std::make_unique<NumericConstantExpression>(as_ulong);
     }
 };
 

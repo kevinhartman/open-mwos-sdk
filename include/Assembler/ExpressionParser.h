@@ -34,6 +34,11 @@ struct ExpectedTokenException : std::runtime_error {
         : runtime_error("Expected token: '" + expected + "' Got: '" + got_instead + "'. Context:\n" + context) {}
 };
 
+struct NumericExpressionOutOfRangeException : std::runtime_error {
+    NumericExpressionOutOfRangeException(const std::string& expression)
+        : runtime_error("Value cannot be represented in 32 bits: '" + expression + "'.") {}
+};
+
 struct InvalidFuncLikeOperatorException : std::runtime_error {
     InvalidFuncLikeOperatorException(const std::string& got_instead)
         : runtime_error("Invalid function name. Valid functions are 'hi', 'lo' and 'high'. Got: '" + got_instead + "'.") {}
