@@ -33,32 +33,6 @@ enum Lang {
     ICode_Fortran = 6
 };
 
-struct VSect {
-    bool isRemote;
-};
-
-struct PSect {
-    std::string name;
-    uint16_t
-        tylan,
-        revision,
-        edition;
-    uint32_t
-        stack,
-        entry_offset,
-        trap_handler_offset;
-
-    std::vector<VSect> vsects;
-
-    Type GetType() {
-        return static_cast<Type>(tylan >> 8U);
-    }
-
-    Lang GetLang() {
-        return static_cast<Lang>(tylan & 0xFFU);
-    }
-};
-
 using SerializableROFHeader = SerializableStruct<
     SerializableArray<char, 4>,
     SequenceOfType<uint16_t, 4>,

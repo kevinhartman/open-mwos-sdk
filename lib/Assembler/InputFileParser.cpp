@@ -1,5 +1,7 @@
 #include "InputFileParser.h"
 
+#include "AssemblerTypes.h"
+
 #include <istream>
 #include <optional>
 #include <string>

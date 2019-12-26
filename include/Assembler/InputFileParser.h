@@ -8,21 +8,12 @@
 
 namespace assembler {
 
-struct Label {
-    std::string name;
-    bool is_global;
-};
-
-struct Entry {
-    std::optional<Label> label{};
-    std::optional<std::string> operation{};
-    std::optional<std::string> operands{};
-    std::optional<std::string> comment{};
-};
+class Entry;
 
 class InputFileParser {
 public:
-    InputFileParser() = default;
+    InputFileParser();
+    ~InputFileParser();
     void Parse(std::istream& lines);
 
     const std::vector<Entry>& GetListing() const;
@@ -36,7 +27,7 @@ private:
     std::string ParseOperands(const std::string& line, Entry& entry) const;
 
 private:
-    std::vector<Entry> listing{};
+    std::vector<Entry> listing;
 };
 
 // TODO: add proper messages using some sort of string concatenation

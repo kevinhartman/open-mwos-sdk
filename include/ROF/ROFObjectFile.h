@@ -66,14 +66,6 @@ public:
         compiler_version = version;
     }
 
-    inline const PSect& GetPSect() const {
-        return psect;
-    }
-
-    inline const std::vector<VSect>& GetVSects() const {
-        return vsects;
-    }
-
     std::vector<ExternDefinition> GetExternalDefinitions() const;
 
     std::vector<uint32_t> GetCode() const;
@@ -87,8 +79,6 @@ public:
 
 private:
     uint16_t compiler_version;
-    PSect psect;
-    std::vector<VSect> vsects; // Vsect outside of PSect is unlikely, but possible
     std::vector<uint32_t> code;
 };
 

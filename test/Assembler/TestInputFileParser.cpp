@@ -2,6 +2,7 @@
 
 #include "Endian.h"
 #include "InputFileParser.h"
+#include "AssemblerTypes.h"
 
 #include <iostream>
 #include <sstream>
