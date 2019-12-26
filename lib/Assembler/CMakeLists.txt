@@ -3,6 +3,7 @@ add_library(Assembler
         InputFileParser.cpp
         ExpressionLexer.cpp
         Assembler.cpp
+        MipsAssemblerTarget.cpp
 )
 
 target_include_directories(Assembler PUBLIC
