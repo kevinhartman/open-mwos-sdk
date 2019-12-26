@@ -5,9 +5,21 @@
 #include <istream>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <regex>
+#include <unordered_set>
 
 namespace assembler {
+
+constexpr std::initializer_list<std::string_view> SpecialNoCommentDirectives = {
+    "fail",
+    "nam",
+    "opt",
+    "ttl"
+};
+
+InputFileParser::InputFileParser() : listing({}) {};
+InputFileParser::~InputFileParser() = default;
 
 const std::vector<Entry>& InputFileParser::GetListing() const {
     return listing;
@@ -107,6 +119,8 @@ std::string InputFileParser::ParseOperands(const std::string& line, Entry& entry
 }
 
 void InputFileParser::Parse(std::istream& lines) {
+    static std::unordered_set<std::string_view> special = SpecialNoCommentDirectives;
+
     std::string line;
     while (std::getline(lines, line)) {
         if (ParseBlank(line)) {
@@ -123,6 +137,14 @@ void InputFileParser::Parse(std::istream& lines) {
         if (ParseComment(line, entry)) goto done;
         line = ParseOperation(line, entry);
         line = ParseSeparator(line);
+
+        if (entry.operation) {
+            if (special.count(entry.operation.value())) {
+                // Special directive found. Parse the rest of the line as the operand.
+                entry.operands = line;
+                goto done;
+            }
+        }
 
         if (ParseComment(line, entry)) goto done;
         line = ParseOperands(line, entry);

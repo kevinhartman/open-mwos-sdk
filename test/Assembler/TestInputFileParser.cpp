@@ -232,6 +232,43 @@ SCENARIO("Input lines are properly parsed", "[parser]") {
                     "$1,label-*($2)",
                     "load word at $2 into $1"
                 }
+            },
+            // Test no-comment directives (a directive which treats the rest of the line as an operand).
+            {
+                "    fail    this is the error",
+                {
+                    std::nullopt,
+                    "fail",
+                    "this is the error",
+                    std::nullopt
+                }
+            },
+            {
+                "    nam    Cool Trans Unit",
+                {
+                    std::nullopt,
+                    "nam",
+                    "Cool Trans Unit",
+                    std::nullopt
+                }
+            },
+            {
+                "    opt    o=/path/to/out_file",
+                {
+                    std::nullopt,
+                    "opt",
+                    "o=/path/to/out_file",
+                    std::nullopt
+                }
+            },
+            {
+                "    ttl    This translation unit is very cool",
+                {
+                    std::nullopt,
+                    "ttl",
+                    "This translation unit is very cool",
+                    std::nullopt
+                }
             }
         }));
 
