@@ -8,7 +8,7 @@
 
 namespace rof {
 
-constexpr auto ROFSyncBytes = std::array { '\0', '\0', '\0', '\0'}; //TODO: find correct value
+constexpr auto ROFSyncBytes = std::array<uint8_t, 4>{ 0xDE, 0xAD, 0xFA, 0xCE};
 
 enum Type {
     Program = 1,
