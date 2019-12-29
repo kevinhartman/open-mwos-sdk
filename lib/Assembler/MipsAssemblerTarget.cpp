@@ -17,7 +17,7 @@ MipsAssemblerTarget::~MipsAssemblerTarget() = default;
 uint32_t ParseRegister(std::string register_str) {
     auto name_to_reg = std::vector<std::regex> {
         std::regex(R"((\$0|zero))"),
-        std::regex(R"((\$1|AT))"),
+        std::regex(R"((\$1|at))"),
         std::regex(R"((\$2|v0))"),
         std::regex(R"((\$3|v1))"),
         std::regex(R"((\$4|a0))"),
@@ -50,7 +50,7 @@ uint32_t ParseRegister(std::string register_str) {
         std::regex(R"((\$31|ra))")
     };
 
-    for (u_int8_t reg_id; reg_id < 32; reg_id++) {
+    for (u_int8_t reg_id = 0; reg_id < 32; reg_id++) {
         if (std::regex_match(register_str, name_to_reg.at(reg_id))) {
             return reg_id;
         }
@@ -172,7 +172,7 @@ Instruction RType(const Entry& entry) {
     instruction.data = OpCode << 26U | FuncCode;
     instruction.size = 4;
 
-    auto operands = Syntax(entry.operands.value());
+    auto operands = Syntax(entry.operands.value_or(""));
 
     if constexpr (IsArgSentinel(RS)) {
         instruction.data |= ParseRegister(std::get<assembler::RS>(operands).value()) << 21U;
@@ -210,7 +210,7 @@ Instruction IType(const Entry& entry) {
     instruction.data = OpCode << 26U;
     instruction.size = 4;
 
-    auto operands = Syntax(entry.operands.value());
+    auto operands = Syntax(entry.operands.value_or(""));
 
     if constexpr (IsArgSentinel(RS)) {
         instruction.data |= ParseRegister(std::get<assembler::RS>(operands).value()) << 21U;
@@ -242,7 +242,7 @@ Instruction JType(const Entry& entry) {
     instruction.data = OpCode << 26U;
     instruction.size = 4;
 
-    auto operands = Syntax(entry.operands.value());
+    auto operands = Syntax(entry.operands.value_or(""));
     if constexpr (IsArgSentinel(Target)) {
         instruction.expr_mappings.emplace_back(
             ExpressionMapping{ 0, 26, ParseExpression(std::get<assembler::Target>(operands).value()) });
