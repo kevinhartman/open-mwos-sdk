@@ -12,7 +12,7 @@ class Entry;
 struct ExpressionMapping {
     size_t offset;
     size_t bit_count;
-    std::unique_ptr<Expression> expression;
+    std::shared_ptr<Expression> expression;
 };
 
 struct Instruction {
