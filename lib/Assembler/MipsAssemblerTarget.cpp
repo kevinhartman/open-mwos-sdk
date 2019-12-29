@@ -256,11 +256,11 @@ Instruction JType(const Entry& entry) {
 Instruction ParseJALR(const Entry& entry) {
     try {
         // TODO: catch correct exception only
-        RType<0b000000, Arg, 0b00000, Arg, 0b000000, 0b001001, RTypeTuple<RD, RS>>(entry);
+        return RType<0b000000, Arg, 0b00000, Arg, 0b000000, 0b001001, RTypeTuple<RD, RS>>(entry);
     } catch (...) {
         // Try to parse as single register. If it works (it's RS), inject default $31 for RD.
         ParseRegister(entry.operands.value_or(""));
-        RType<0b000000, Arg, 0b00000, Arg, 0b000000, 0b001001, RTypeTuple<RD, RS>>(
+        return RType<0b000000, Arg, 0b00000, Arg, 0b000000, 0b001001, RTypeTuple<RD, RS>>(
             Entry{
                 entry.label,
                 entry.operation,
