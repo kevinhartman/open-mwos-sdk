@@ -158,8 +158,6 @@ std::tuple<Target> JTypeTuple(std::string operand_str) {
 
 //typedef uint32_t Field;
 constexpr uint32_t Arg = std::numeric_limits<uint32_t>::max();
-// TODO: assert all field types have fewer bits than Field
-
 constexpr bool IsArgSentinel(uint32_t field) {
     return field == Arg;
 }
@@ -271,6 +269,22 @@ Instruction ParseJALR(const Entry& entry) {
     }
 }
 
+template <uint32_t OpCode>
+Instruction ParseCOPz(const Entry& entry) {
+    // JType looks to be the closest format, so we use it to fill the constant parts
+    // of the instruction (OpCode and bit 25).
+    auto instruction = JType<OpCode, 0x2000000, JTypeTuple<Target>>(entry);
+
+    if (!entry.operands) {
+        throw "missing operation";
+    }
+
+    // Add 25 bit Co-processor operation as expression.
+    instruction.expr_mappings.emplace_back(ExpressionMapping{ 0, 25, ParseExpression(entry.operands.value()) });
+
+    return instruction;
+}
+
 Instruction ThrowUnimplemented(const Entry& entry) {
     throw "unimplemented";
 }
@@ -300,10 +314,10 @@ std::map<std::string, ParseFunc> instructions_fn = {
     { "cfc1",   RType<0b010001, 0b00010, Arg, Arg, 0b00000, 0b000000, RTypeTuple<RT, RD>> },
     { "cfc2",   RType<0b010010, 0b00010, Arg, Arg, 0b00000, 0b000000, RTypeTuple<RT, RD>> },
     { "cfc3",   RType<0b010011, 0b00010, Arg, Arg, 0b00000, 0b000000, RTypeTuple<RT, RD>> },
-    { "cop0",   ThrowUnimplemented },
-    { "cop1",   ThrowUnimplemented },
-    { "cop2",   ThrowUnimplemented },
-    { "cop3",   ThrowUnimplemented },
+    { "cop0",   ParseCOPz<0b010000> },
+    { "cop1",   ParseCOPz<0b010001> },
+    { "cop2",   ParseCOPz<0b010010> },
+    { "cop3",   ParseCOPz<0b010011> },
     { "ctc0",   ThrowInvalidCoprocessor },
     { "ctc1",   RType<0b010001, 0b00110, Arg, Arg, 0b00000, 0b000000, RTypeTuple<RT, RD>> },
     { "ctc2",   RType<0b010010, 0b00110, Arg, Arg, 0b00000, 0b000000, RTypeTuple<RT, RD>> },
@@ -368,6 +382,13 @@ std::map<std::string, ParseFunc> instructions_fn = {
     { "xor",    RType<0b000000, Arg, Arg, Arg, 0b00000, 0b100110, RTypeTuple<RD, RS, RT>> },
     { "xori",   IType<0b001110, Arg, Arg, Arg, ITypeTuple<RT, RS, Immediate>> },
 
+    // CP-0 Instructions
+    // Note: these can also be invoked using copz generic instruction.
+    { "rfe",    RType<0b010000, 0b10000, 0b00000, 0b00000, 0b00000, 0b010000, RTypeNoArgs> },
+    { "tlbp",   RType<0b010000, 0b10000, 0b00000, 0b00000, 0b00000, 0b001000, RTypeNoArgs> },
+    { "tlbr",   RType<0b010000, 0b10000, 0b00000, 0b00000, 0b00000, 0b000001, RTypeNoArgs> },
+    { "tlbwi",  RType<0b010000, 0b10000, 0b00000, 0b00000, 0b00000, 0b000010, RTypeNoArgs> },
+    { "tlbwr",  RType<0b010000, 0b10000, 0b00000, 0b00000, 0b00000, 0b000110, RTypeNoArgs> }
 };
 
 Instruction MipsAssemblerTarget::EmitInstruction(const Entry& entry) {
