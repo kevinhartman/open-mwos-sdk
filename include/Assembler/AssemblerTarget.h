@@ -23,7 +23,7 @@ struct Instruction {
 
 class AssemblerTarget {
 public:
-    virtual ~AssemblerTarget() = 0;
+    virtual ~AssemblerTarget() = default;
     virtual Instruction EmitInstruction(const Entry& entry) = 0;
 };
 

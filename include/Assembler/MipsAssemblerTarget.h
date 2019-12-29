@@ -9,7 +9,7 @@ namespace assembler {
 class MipsAssemblerTarget : public AssemblerTarget {
 public:
     MipsAssemblerTarget();
-    virtual ~MipsAssemblerTarget();
+    virtual ~MipsAssemblerTarget() override;
     Instruction EmitInstruction(const Entry& entry) override;
 };
 
