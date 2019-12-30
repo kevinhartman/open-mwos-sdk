@@ -72,7 +72,10 @@ namespace assembler {
                 { MakeEntry("addu", "t1,t1,a0"), "addu $t1, $t1, $a0", {}},
                 { MakeEntry("sb", "zero,-4(t0)"), "sb $zero, ($t0)", MakeExpressionMappings(MakeExpressionMapping(0, 16, "-4")) },
                 { MakeEntry("jal", "0xFFFFFF"), "jal 0", MakeExpressionMappings(MakeExpressionMapping(0, 26, "0xFFFFFF"))},
-                { MakeEntry("srl", "k0,$5,$1D"), "srl $k0, $a1, 0", MakeExpressionMappings(MakeExpressionMapping(6, 5, "$1D")) }
+                { MakeEntry("srl", "k0,$5,$1D"), "srl $k0, $a1, 0", MakeExpressionMappings(MakeExpressionMapping(6, 5, "$1D")) },
+                { MakeEntry("jalr", "t4"), "jalr $t4", {} },
+                { MakeEntry("jalr", "$31,t4"), "jalr $t4", {} },
+                { MakeEntry("jalr", "$30,t4"), "jalr $fp, $t4", {} },
             }));
 
             WHEN("the expression is parsed") {
