@@ -46,7 +46,7 @@ uint32_t ParseRegister(std::string register_str) {
         std::regex(R"((\$27|k1))"),
         std::regex(R"((\$28|gp))"),
         std::regex(R"((\$29|sp))"),
-        std::regex(R"((\$30|cp))"),
+        std::regex(R"((\$30|cp|fp))"),
         std::regex(R"((\$31|ra))")
     };
 
