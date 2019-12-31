@@ -29,6 +29,17 @@ struct PSect {
     std::vector<VSect> vsects;
 };
 
+struct AssemblyState {
+    bool found_program_end = false;
+    size_t code_counter = 0;
+
+    bool in_psect = false;
+    bool in_vsect = false;
+
+    PSect psect {};
+    std::vector<VSect> root_vsects {};
+};
+
 std::unique_ptr<Expression> ParseExpression(const std::string& expr_str) {
     auto lexer = ExpressionLexer(expr_str);
     auto parser = ExpressionParser(lexer);
@@ -78,84 +89,140 @@ void ReadPSectParams(const Entry& entry, PSect& p_sect) {
     }
 }
 
-void Assembler::Process(const std::vector<Entry> &listing) {
-    size_t code_counter = 0;
 
-    PSect p_sect {};
-    bool in_psect = false;
-    bool in_vsect = false;
+bool Assembler::HandleDirective(const Entry& entry, AssemblyState& state) {
+    auto require_no_label = [&entry]() {
+        if (entry.label)
+            throw "Operation " + entry.operation.value_or("[null]") + " cannot have a label.";
+    };
+
+    auto require_no_comment = [&entry]() {
+        if (entry.comment)
+            throw "Operation " + entry.operation.value_or("[null]") + "cannot have a comment.";
+    };
+
+    bool handled = false;
+    auto op = [&entry, &handled](const auto& str) {
+        if (entry.operation.value() == str) {
+            return (handled = true);
+        }
+        return false;
+    };
+
+    if (op("psect"))
+    {
+        if (state.in_psect) throw "nested psects aren't allowed";
+        if (state.in_vsect) throw "psect may not appear with vsect";
+        if (state.psect.tylan) throw "psect already initialized. only 1 psect allowed per file";
+
+        state.in_psect = true;
+        ReadPSectParams(entry, state.psect);
+    }
+    else if (op("vsect"))
+    {
+        if (state.in_vsect) throw "nested vsects aren't allowed";
+        state.in_vsect = true;
+    }
+    else if (op("ends"))
+    {
+        if (!state.in_psect && !state.in_vsect) {
+            throw "not in section";
+        }
+
+        if (state.in_psect && state.in_vsect) {
+            // If we were in both, we must be exiting the vsect.
+            state.in_vsect = false;
+        } else {
+            // We're exiting either a vsect or psect. In either case, we're no longer in any section.
+            state.in_psect = false;
+            state.in_vsect = false;
+        }
+    }
+    else if (op("equ")) {
+        throw "unimplemented";
+    }
+    else if (op("set")) {
+        throw "unimplemented";
+    }
+    else if (op("nam")) {
+        throw "unimplemented";
+    }
+    else if (op("ttl")) {
+        throw "unimplemented";
+    }
+    else if (op("opt")) {
+        throw "unimplemented";
+    }
+    else if (op("rept")) {
+        throw "unimplemented.";
+    }
+    else if (op("endr")) {
+        throw "unimplemented.";
+    }
+    else if (op("macro"))
+    {
+        throw "unimplemented.";
+    }
+    else if (op("endm"))
+    {
+        throw "unimplemented.";
+    }
+    else if (op("ifeq") || op("ifne") || op("iflt") || op("ifle") || op("ifgt") || op("ifge") || op("ifdef") || op("ifndef"))
+    {
+        throw "unimplemented.";
+    }
+    else if (op("endc"))
+    {
+        throw "unimplemented.";
+    }
+    else if (op("use"))
+    {
+        throw "unimplemented.";
+    }
+    else if (op("spc")) {
+        throw "unimplemented.";
+    }
+    else if (op("end"))
+    {
+        require_no_label();
+        // End of program signaled. Stop processing input lines.
+        state.found_program_end = true;
+    }
+}
+
+bool Assembler::HandlePseudoInstruction(const Entry& entry, AssemblyState& state) {
+    bool handled = false;
+    auto op = [&entry, &handled](const auto& str) {
+        if (entry.operation.value() == str) {
+            return (handled = true);
+        }
+        return false;
+    };
+
+    if (op("align")) {
+        throw "unimplemented";
+    } else if (op("com")) {
+        throw "unimplemented";
+    }
+
+    return handled;
+}
+
+void Assembler::Process(const std::vector<Entry> &listing) {
+    AssemblyState state {};
 
     for (auto& entry : listing) {
+        if (state.found_program_end) {
+            return;
+        }
+
         if (entry.operation) {
-            auto require_no_label = [&entry]() {
-                if (entry.label)
-                    throw "Operation " + entry.operation.value_or("[null]") + " cannot have a label.";
-            };
+            if (HandleDirective(entry, state)) continue;
+            if (HandlePseudoInstruction(entry, state)) continue;
 
-            auto require_no_comment = [&entry]() {
-                if (entry.comment)
-                    throw "Operation " + entry.operation.value_or("[null]") + "cannot have a comment.";
-            };
+            // This must be a CPU instruction, or an invalid operation.
+            auto instruction = target->EmitInstruction(entry);
 
-            auto op = [&entry](const auto& str) {
-                return entry.operation.value() == str;
-            };
-
-            if (op("psect"))
-            {
-                if (in_psect) throw "nested psects aren't allowed";
-                if (in_vsect) throw "psect may not appear with vsect";
-                if (p_sect.tylan) throw "psect already initialized. only 1 psect allowed per file";
-
-                in_psect = true;
-                ReadPSectParams(entry, p_sect);
-            }
-            else if (op("vsect"))
-            {
-                if (in_vsect) throw "nested vsects aren't allowed";
-                in_vsect = true;
-            }
-            else if (op("ends"))
-            {
-                if (in_psect && in_vsect) {
-                    // this is the only case for nesting sections.
-                    in_vsect = false;
-                } else {
-                    in_psect = false;
-                    in_vsect = false;
-                }
-            }
-            else if (op("macro"))
-            {
-                throw "unimplemented.";
-            }
-            else if (op("endm"))
-            {
-                throw "unimplemented.";
-            }
-            else if (op("ifeq") || op("ifne") || op("iflt") || op("ifle") || op("ifgt") || op("ifge") || op("ifdef") || op("ifndef"))
-            {
-                throw "unimplemented.";
-            }
-            else if (op("endc"))
-            {
-                throw "unimplemented.";
-            }
-            else if (op("use"))
-            {
-                throw "unimplemented.";
-            }
-            else if (op("end"))
-            {
-                require_no_label();
-                // End of program signaled. Stop processing input lines.
-                break;
-            }
-            else
-            {
-                // Pseudo or CPU instruction.
-                auto instruction = target->EmitInstruction(entry);
-            }
         }
     }
 }
