@@ -222,7 +222,7 @@ void Assembler::Process(const std::vector<Entry> &listing) {
 
             // This must be a CPU instruction, or an invalid operation.
             auto instruction = target->EmitInstruction(entry);
-
+            state.code_counter += instruction.size;
         }
     }
 }

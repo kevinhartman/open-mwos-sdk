@@ -10,6 +10,8 @@
 #include "ExpressionLexer.h"
 #include "ExpressionParser.h"
 
+#include "Endian.h"
+
 #include <limits>
 #include <optional>
 #include <vector>
@@ -45,7 +47,7 @@ namespace assembler {
         size_t count;
 
         // TODO: use host endian (default is little for CS_MODE)
-        if (cs_open(CS_ARCH_MIPS, static_cast<cs_mode>(CS_MODE_MIPS32 | CS_MODE_MIPS2), &handle) != CS_ERR_OK)
+        if (cs_open(CS_ARCH_MIPS, static_cast<cs_mode>(CS_MODE_MIPS32 | CS_MODE_MIPS2 | CS_MODE_BIG_ENDIAN), &handle) != CS_ERR_OK)
             throw "Couldn't open Capstone MIPS decoder.";
 
         count = cs_disasm(handle, reinterpret_cast<uint8_t*>(&instruction), sizeof(instruction), 0x1000, 0, &insn);
@@ -79,14 +81,13 @@ namespace assembler {
             }));
 
             WHEN("the expression is parsed") {
-                MipsAssemblerTarget target {};
+                MipsAssemblerTarget target(support::Endian::big);
 
                 THEN("the expression tree is correct") {
                     auto encoded = target.EmitInstruction(pair.input_instruction);
-                    REQUIRE(encoded.data <= std::numeric_limits<uint32_t>::max());
                     REQUIRE(encoded.size == 4);
 
-                    auto capstone_result = DecodeWithCapstone(static_cast<uint32_t>(encoded.data));
+                    auto capstone_result = DecodeWithCapstone(static_cast<uint32_t>(encoded.data.u32));
                     REQUIRE(capstone_result);
                     REQUIRE(capstone_result.value() == pair.expected_capstone_str);
                     REQUIRE_THAT(encoded.expr_mappings, Catch::UnorderedEquals(pair.expected_expr_mappings));

@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "Expression.h"
+#include "Endian.h"
 
 namespace assembler {
 class Entry;
@@ -16,7 +17,13 @@ struct ExpressionMapping {
 };
 
 struct Instruction {
-    uint64_t data;
+    union {
+        uint8_t raw[8];
+        uint64_t u64;
+        uint32_t u32;
+        uint16_t u16;
+        uint8_t u8;
+    } data;
     size_t size;
     std::vector<ExpressionMapping> expr_mappings;
 };
@@ -24,6 +31,7 @@ struct Instruction {
 class AssemblerTarget {
 public:
     virtual ~AssemblerTarget() = default;
+    virtual support::Endian GetEndianness() = 0;
     virtual Instruction EmitInstruction(const Entry& entry) = 0;
 };
 

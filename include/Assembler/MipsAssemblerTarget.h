@@ -1,4 +1,5 @@
 #include "AssemblerTarget.h"
+#include "Endian.h"
 
 #include <cstdint>
 #include <tuple>
@@ -8,9 +9,13 @@ namespace assembler {
 
 class MipsAssemblerTarget : public AssemblerTarget {
 public:
-    MipsAssemblerTarget();
+    MipsAssemblerTarget(support::Endian endianness);
     virtual ~MipsAssemblerTarget() override;
+    support::Endian GetEndianness() override;
     Instruction EmitInstruction(const Entry& entry) override;
+
+private:
+    support::Endian endianness;
 };
 
 }

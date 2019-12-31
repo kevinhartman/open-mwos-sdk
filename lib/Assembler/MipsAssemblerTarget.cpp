@@ -8,11 +8,16 @@
 #include <regex>
 #include <vector>
 #include <tuple>
+#include <AssemblerTarget.h>
 
 namespace assembler {
 
-MipsAssemblerTarget::MipsAssemblerTarget() = default;
+MipsAssemblerTarget::MipsAssemblerTarget(support::Endian endianness) : endianness(endianness) { };
 MipsAssemblerTarget::~MipsAssemblerTarget() = default;
+
+support::Endian MipsAssemblerTarget::GetEndianness() {
+    return endianness;
+}
 
 uint32_t ParseRegister(std::string register_str) {
     auto name_to_reg = std::vector<std::regex> {
@@ -167,34 +172,34 @@ typedef std::tuple<RS, RT, RD, Shift> (*RTypeSyntaxFunc)(std::string);
 template <uint32_t OpCode, uint32_t RS, uint32_t RT, uint32_t RD, uint32_t Shift, uint32_t FuncCode, RTypeSyntaxFunc Syntax>
 Instruction RType(const Entry& entry) {
     Instruction instruction {};
-    instruction.data = OpCode << 26U | FuncCode;
+    instruction.data.u32 = OpCode << 26U | FuncCode;
     instruction.size = 4;
 
     auto operands = Syntax(entry.operands.value_or(""));
 
     if constexpr (IsArgSentinel(RS)) {
-        instruction.data |= ParseRegister(std::get<assembler::RS>(operands).value()) << 21U;
+        instruction.data.u32 |= ParseRegister(std::get<assembler::RS>(operands).value()) << 21U;
     } else {
-        instruction.data |= RS << 21U;
+        instruction.data.u32 |= RS << 21U;
     }
 
     if constexpr (IsArgSentinel(RT)) {
-        instruction.data |= ParseRegister(std::get<assembler::RT>(operands).value()) << 16U;
+        instruction.data.u32 |= ParseRegister(std::get<assembler::RT>(operands).value()) << 16U;
     } else {
-        instruction.data |= RT << 16U;
+        instruction.data.u32 |= RT << 16U;
     }
 
     if constexpr (IsArgSentinel(RD)) {
-        instruction.data |= ParseRegister(std::get<assembler::RD>(operands).value()) << 11U;
+        instruction.data.u32 |= ParseRegister(std::get<assembler::RD>(operands).value()) << 11U;
     } else {
-        instruction.data |= RD << 11U;
+        instruction.data.u32 |= RD << 11U;
     }
 
     if constexpr (IsArgSentinel(Shift)) {
         instruction.expr_mappings.emplace_back(
             ExpressionMapping{ 6, 5, ParseExpression(std::get<assembler::Shift>(operands).value())});
     } else {
-        instruction.data |= Shift << 6U;
+        instruction.data.u32 |= Shift << 6U;
     }
 
     return instruction;
@@ -205,28 +210,28 @@ typedef std::tuple<RS, RT, Immediate> (*ITypeSyntaxFunc)(std::string);
 template <uint32_t OpCode, uint32_t RS, uint32_t RT, uint32_t Immediate, ITypeSyntaxFunc Syntax>
 Instruction IType(const Entry& entry) {
     Instruction instruction {};
-    instruction.data = OpCode << 26U;
+    instruction.data.u32 = OpCode << 26U;
     instruction.size = 4;
 
     auto operands = Syntax(entry.operands.value_or(""));
 
     if constexpr (IsArgSentinel(RS)) {
-        instruction.data |= ParseRegister(std::get<assembler::RS>(operands).value()) << 21U;
+        instruction.data.u32 |= ParseRegister(std::get<assembler::RS>(operands).value()) << 21U;
     } else {
-        instruction.data |= RS << 21U;
+        instruction.data.u32 |= RS << 21U;
     }
 
     if constexpr (IsArgSentinel(RT)) {
-        instruction.data |= ParseRegister(std::get<assembler::RT>(operands).value()) << 16U;
+        instruction.data.u32 |= ParseRegister(std::get<assembler::RT>(operands).value()) << 16U;
     } else {
-        instruction.data |= RT << 16U;
+        instruction.data.u32 |= RT << 16U;
     }
 
     if constexpr (IsArgSentinel(Immediate)) {
         instruction.expr_mappings.emplace_back(
             ExpressionMapping{ 0, 16, ParseExpression(std::get<assembler::Immediate>(operands).value()) });
     } else {
-        instruction.data |= Immediate;
+        instruction.data.u32 |= Immediate;
     }
 
     return instruction;
@@ -237,7 +242,7 @@ typedef std::tuple<Target> (*JTypeSyntaxFunc)(std::string);
 template <uint32_t OpCode, uint32_t Target, JTypeSyntaxFunc Syntax>
 Instruction JType(const Entry& entry) {
     Instruction instruction {};
-    instruction.data = OpCode << 26U;
+    instruction.data.u32 = OpCode << 26U;
     instruction.size = 4;
 
     auto operands = Syntax(entry.operands.value_or(""));
@@ -245,7 +250,7 @@ Instruction JType(const Entry& entry) {
         instruction.expr_mappings.emplace_back(
             ExpressionMapping{ 0, 26, ParseExpression(std::get<assembler::Target>(operands).value()) });
     } else {
-        instruction.data |= Target;
+        instruction.data.u32 |= Target;
     }
 
     return instruction;
@@ -392,7 +397,13 @@ std::map<std::string, ParseFunc> instructions_fn = {
 };
 
 Instruction MipsAssemblerTarget::EmitInstruction(const Entry& entry) {
-    return instructions_fn[entry.operation.value()](entry);
+    auto instruction = instructions_fn[entry.operation.value()](entry);
+
+    if (endianness != support::HostEndian) {
+        support::EndianSwap(&instruction.data.u32);
+    }
+
+    return instruction;
 }
 
 }
