@@ -1,8 +1,11 @@
 add_library(Assembler
-        ExpressionParser.cpp
-        InputFileParser.cpp
-        ExpressionLexer.cpp
         Assembler.cpp
+        AssemblerDirective.cpp
+        AssemblerPseudoInst.cpp
+        ExpressionLexer.cpp
+        ExpressionParser.cpp
+        ExpressionResolver.cpp
+        InputFileParser.cpp
         MipsAssemblerTarget.cpp
 )
 
