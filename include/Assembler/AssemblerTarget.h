@@ -18,7 +18,7 @@ struct ExpressionMapping {
 
 struct Instruction {
     union {
-        uint8_t raw[8];
+        uint8_t raw[sizeof(uint64_t)];
         uint64_t u64;
         uint32_t u32;
         uint16_t u16;
@@ -33,6 +33,7 @@ public:
     virtual ~AssemblerTarget() = default;
     virtual support::Endian GetEndianness() = 0;
     virtual Instruction EmitInstruction(const Entry& entry) = 0;
+    // TODO: PatchInstruction() for applying expression result to instruction? Perhaps not needed.
 };
 
 }
