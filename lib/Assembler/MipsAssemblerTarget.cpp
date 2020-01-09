@@ -9,6 +9,7 @@
 #include <vector>
 #include <tuple>
 #include <AssemblerTarget.h>
+#include <unordered_map>
 
 namespace assembler {
 
@@ -290,16 +291,12 @@ Instruction ParseCOPz(const Entry& entry) {
     return instruction;
 }
 
-Instruction ThrowUnimplemented(const Entry& entry) {
-    throw "unimplemented";
-}
-
 Instruction ThrowInvalidCoprocessor(const Entry& entry) {
     throw "Instruction not supported by coprocessor: " + entry.operation.value();
 }
 
 typedef Instruction (*ParseFunc)(const Entry&);
-std::map<std::string, ParseFunc> instructions_fn = {
+std::unordered_map<std::string, ParseFunc> instructions_fn = {
     { "add",    RType<0b000000, Arg, Arg, Arg, 0b00000, 0b100000, RTypeTuple<RD, RS, RT>> },
     { "addi",   IType<0b001000, Arg, Arg, Arg, ITypeTuple<RT, RS, Immediate>> },
     { "addiu",  IType<0b001001, Arg, Arg, Arg, ITypeTuple<RT, RS, Immediate>> },
@@ -397,6 +394,7 @@ std::map<std::string, ParseFunc> instructions_fn = {
 };
 
 Instruction MipsAssemblerTarget::EmitInstruction(const Entry& entry) {
+    // TODO: return proper error for missing instruction.
     auto instruction = instructions_fn[entry.operation.value()](entry);
 
     if (endianness != support::HostEndian) {
