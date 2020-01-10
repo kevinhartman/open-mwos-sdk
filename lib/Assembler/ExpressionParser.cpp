@@ -8,6 +8,8 @@
 
 namespace assembler {
 
+namespace {
+
 struct PrefixParselet {
     virtual std::unique_ptr<Expression> Parse(ExpressionParser& parser, Token token) const = 0;
 };
@@ -181,6 +183,7 @@ std::optional<size_t> GetInfixPrecedence(TokenType token_type) {
     }
 
     return infix_iterator->second->GetPrecedence();
+}
 }
 
 ExpressionParser::ExpressionParser(ExpressionLexer lexer) : lexer(std::move(lexer)) {

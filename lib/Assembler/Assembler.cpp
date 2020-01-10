@@ -7,23 +7,18 @@
 
 namespace assembler {
 
-namespace pseudoinst {
 extern bool HandlePseudoInstruction(const Entry &entry, AssemblyState &state);
-}
-
-namespace directive {
 extern bool HandleDirective(const Entry &entry, AssemblyState &state);
-}
 
 Assembler::Assembler(std::unique_ptr<AssemblerTarget> target) : target(std::move(target)) { }
 Assembler::~Assembler() = default;
 
 bool Assembler::HandlePseudoInstruction(const Entry& entry, AssemblyState& state) {
-    return assembler::pseudoinst::HandlePseudoInstruction(entry, state);
+    return assembler::HandlePseudoInstruction(entry, state);
 }
 
 bool Assembler::HandleDirective(const Entry& entry, AssemblyState& state) {
-    return assembler::directive::HandleDirective(entry, state);
+    return assembler::HandleDirective(entry, state);
 }
 
 void Assembler::Process(const std::vector<Entry> &listing) {

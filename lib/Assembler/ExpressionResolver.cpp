@@ -9,6 +9,8 @@
 
 namespace assembler {
 
+namespace {
+
 using ReferenceResolver = std::function<uint32_t(const Expression&)>;
 struct ResolverVisitor : ExpressionVisitor {
     ResolverVisitor(ReferenceResolver reference_resolver_func) : reference_resolver_func(reference_resolver_func) {}
@@ -90,6 +92,7 @@ struct ResolverVisitor : ExpressionVisitor {
     uint32_t result {};
     ReferenceResolver reference_resolver_func;
 };
+}
 
 std::unique_ptr<Expression> ParseExpression(const std::string& expr_str) {
     auto lexer = ExpressionLexer(expr_str);

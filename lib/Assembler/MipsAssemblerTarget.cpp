@@ -13,12 +13,7 @@
 
 namespace assembler {
 
-MipsAssemblerTarget::MipsAssemblerTarget(support::Endian endianness) : endianness(endianness) { };
-MipsAssemblerTarget::~MipsAssemblerTarget() = default;
-
-support::Endian MipsAssemblerTarget::GetEndianness() {
-    return endianness;
-}
+namespace {
 
 uint32_t ParseRegister(std::string register_str) {
     auto name_to_reg = std::vector<std::regex> {
@@ -71,6 +66,7 @@ std::unique_ptr<Expression> ParseExpression(const std::string& expr_str) {
 
     return parser.Parse();
 }
+
 
 struct RT : std::optional<std::string> { using optional::optional; };
 struct RS : std::optional<std::string> { using optional::optional; };
@@ -392,6 +388,14 @@ std::unordered_map<std::string, ParseFunc> instructions_fn = {
     { "tlbwi",  RType<0b010000, 0b10000, 0b00000, 0b00000, 0b00000, 0b000010, RTypeNoArgs> },
     { "tlbwr",  RType<0b010000, 0b10000, 0b00000, 0b00000, 0b00000, 0b000110, RTypeNoArgs> }
 };
+}
+
+MipsAssemblerTarget::MipsAssemblerTarget(support::Endian endianness) : endianness(endianness) { };
+MipsAssemblerTarget::~MipsAssemblerTarget() = default;
+
+support::Endian MipsAssemblerTarget::GetEndianness() {
+    return endianness;
+}
 
 Instruction MipsAssemblerTarget::EmitInstruction(const Entry& entry) {
     // TODO: return proper error for missing instruction.

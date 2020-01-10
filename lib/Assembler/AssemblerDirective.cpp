@@ -7,7 +7,9 @@
 
 #include <regex>
 
-namespace assembler::directive {
+namespace assembler {
+
+namespace {
 
 void ReadPSectParams(const Entry& entry, PSect& p_sect) {
     auto params = Split(entry.operands.value_or(""), std::regex(","));
@@ -43,6 +45,7 @@ void ReadPSectParams(const Entry& entry, PSect& p_sect) {
     } else {
         throw "not enough parameters to psect directive. Specify all (with optional trap), or none.";
     }
+}
 }
 
 bool HandleDirective(const Entry& entry, AssemblyState& state) {

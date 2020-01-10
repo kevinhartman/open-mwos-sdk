@@ -7,7 +7,9 @@
 #include <iterator>
 #include <unordered_map>
 
-namespace assembler::pseudoinst {
+namespace assembler {
+
+namespace {
 
 void CreateSymbolsHere(SymbolInfo::Type symbol_type, bool is_signed, AssemblyState& state) {
     auto counter = [symbol_type, &state]() {
@@ -154,6 +156,7 @@ std::unordered_map<std::string, PseudoInstFunc> pseudo_instructions = {
     { "org",   Op_Unimplemented },
     { "tcall", Op_Unimplemented }
 };
+}
 
 bool HandlePseudoInstruction(const Entry& entry, AssemblyState& state) {
     auto handler_kv = pseudo_instructions.find(entry.operation.value());
