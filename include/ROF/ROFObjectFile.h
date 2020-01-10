@@ -1,13 +1,9 @@
 #pragma once
 
 #include "ROFHeader.h"
-
 #include "SerializableStruct.h"
-#include <Endian.h>
 
 #include <vector>
-#include <string>
-#include <ostream>
 
 namespace rof {
 
@@ -52,34 +48,12 @@ struct DataEntry {
 
 // ==
 
-class ROFObjectFile {
-public:
-    ROFObjectFile() = default;
-
-    ROFHeader GetHeader() const;
-
-    inline uint16_t GetCompilerVersion() const {
-        return compiler_version;
-    }
-
-    inline void SetCompilerVersion(uint16_t version) {
-        compiler_version = version;
-    }
-
-    std::vector<ExternDefinition> GetExternalDefinitions() const;
-
-    std::vector<uint32_t> GetCode() const;
-
-    std::vector<DataEntry> GetInitializedData() const;
-
-    std::vector<DataEntry> GetRemoteInitializedData() const;
-
-    bool Validate() const;
-    void Write(std::ostream&, support::Endian endianness) const;
-
-private:
-    uint16_t compiler_version;
-    std::vector<uint32_t> code;
+struct ROFObjectFile {
+    ROFHeader header {};
+    std::vector<ExternDefinition> external_definitions {};
+    std::vector<uint32_t> code {};
+    std::vector<DataEntry> initialized_data {};
+    std::vector<DataEntry> remote_initialized_data {};
 };
 
 }

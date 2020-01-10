@@ -5,6 +5,7 @@
 
 #include "InputFileParser.h"
 #include "ROFObjectFile.h"
+#include "ROFObjectWriter.h"
 #include "Endian.h"
 
 int main(int argc, const char* argv[]) {
@@ -23,12 +24,12 @@ int main(int argc, const char* argv[]) {
 
     // create fake ROF for now
     rof::ROFObjectFile rof;
-    rof.SetCompilerVersion(constants::AssemblerVersion);
-    rof.GetHeader().SyncBytes() = { 0xA, 0xB, 0xC, 0xD};
-    rof.GetHeader().AsmVersion() = 2;
-    rof.GetHeader().Name() = "mockrof";
+    rof.header.AsmVersion() = constants::AssemblerVersion;
+    rof.header.SyncBytes() = { 0xA, 0xB, 0xC, 0xD};
+    rof.header.Name() = "mockrof";
     //
 
+    rof::ROFObjectWriter writer(support::Endian::big);
 
     std::fstream out_file;
     out_file.exceptions(std::fstream::badbit | std::fstream::failbit);
@@ -40,7 +41,7 @@ int main(int argc, const char* argv[]) {
         exit(1);
     }
 
-    rof.Write(out_file, support::Endian::big);
+    writer.Write(rof, out_file);
 
     return 0;
 }

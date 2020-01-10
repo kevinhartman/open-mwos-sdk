@@ -22,6 +22,8 @@ bool Assembler::HandleDirective(const Entry& entry, AssemblyState& state) {
 }
 
 void Assembler::Process(const std::vector<Entry> &listing) {
+    // TODO: set the compiler version on resulting ROFs
+
     AssemblyState state {};
 
     for (auto& entry : listing) {

@@ -3,6 +3,7 @@
 #include "AssemblerTarget.h"
 #include "AssemblerTypes.h"
 #include "Expression.h"
+#include "ROFObjectFile.h"
 
 #include <map>
 #include <variant>
@@ -82,5 +83,7 @@ struct AssemblyState {
     PSect psect {};
     std::vector<VSect> root_vsects {};
     std::map<std::string, std::tuple<Label, SymbolInfo>> symbols {};
+
+    rof::ROFObjectFile result {};
 };
 }
