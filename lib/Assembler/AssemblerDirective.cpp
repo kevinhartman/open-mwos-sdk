@@ -11,9 +11,10 @@ namespace assembler {
 
 namespace {
 
-void ReadPSectParams(const Entry& entry, PSect& p_sect) {
+void ReadPSectParams(const Entry& entry, AssemblyState& state) {
     auto params = Split(entry.operands.value_or(""), std::regex(","));
-
+    auto& p_sect = state.psect;
+    
     if (params.size() > 7) {
         throw "too many parameters to psect directive";
     }
@@ -74,7 +75,7 @@ bool HandleDirective(const Entry& entry, AssemblyState& state) {
         if (state.psect.tylan) throw "psect already initialized. only 1 psect allowed per file";
 
         state.in_psect = true;
-        ReadPSectParams(entry, state.psect);
+        ReadPSectParams(entry, state);
     }
     else if (op("vsect"))
     {
