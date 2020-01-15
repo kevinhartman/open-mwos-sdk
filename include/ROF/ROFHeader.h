@@ -8,7 +8,7 @@
 
 namespace rof {
 
-constexpr auto ROFSyncBytes = std::array<uint8_t, 4>{ 0xDE, 0xAD, 0xFA, 0xCE};
+constexpr auto ROFSyncBytes = std::array<uint8_t , 4>{ 0xDE, 0xAD, 0xFA, 0xCE};
 
 enum Type {
     Program = 1,
@@ -34,9 +34,9 @@ enum Lang {
 };
 
 using SerializableROFHeader = SerializableStruct<
-    SerializableArray<char, 4>,
+    SerializableArray<uint8_t, 4>, // TODO: can this work still with uint8_t? I changed it from char.
     SequenceOfType<uint16_t, 4>,
-    SerializableArray<char, 6>,
+    SerializableArray<uint8_t, 6>,
     uint16_t,
     SequenceOfType<uint32_t, 11>,
     SequenceOfType<uint16_t, 3>,
@@ -44,6 +44,7 @@ using SerializableROFHeader = SerializableStruct<
 >;
 
 struct ROFHeader : SerializableROFHeader {
+    ROFHeader() { std::get<0>(*this) = ROFSyncBytes; }
     auto& SyncBytes() { return std::get<0>(*this); }
     auto& TypeLanguage() { return std::get<1>(*this); }
     auto& Revision() { return std::get<2>(*this); }

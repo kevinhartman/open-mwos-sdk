@@ -11,7 +11,7 @@ class Entry;
 class Assembler {
 
 public:
-    Assembler(std::unique_ptr<AssemblerTarget> target);
+    Assembler(uint16_t assembler_version, std::unique_ptr<AssemblerTarget> target);
     ~Assembler();
     void Process(const std::vector<Entry>& listing);
 
@@ -20,6 +20,7 @@ protected:
     bool HandlePseudoInstruction(const Entry& entry, AssemblyState& state);
 
 private:
+    uint16_t assembler_version;
     std::unique_ptr<AssemblerTarget> target;
 };
 

@@ -10,7 +10,8 @@ namespace assembler {
 extern bool HandlePseudoInstruction(const Entry &entry, AssemblyState &state);
 extern bool HandleDirective(const Entry &entry, AssemblyState &state);
 
-Assembler::Assembler(std::unique_ptr<AssemblerTarget> target) : target(std::move(target)) { }
+Assembler::Assembler(uint16_t assembler_version, std::unique_ptr<AssemblerTarget> target)
+    : assembler_version(assembler_version), target(std::move(target)) { }
 Assembler::~Assembler() = default;
 
 bool Assembler::HandlePseudoInstruction(const Entry& entry, AssemblyState& state) {
