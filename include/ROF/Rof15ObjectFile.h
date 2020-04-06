@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ObjectFile.h"
-#include "ROFHeader.h"
+#include "Rof15Header.h"
 #include "SerializableStruct.h"
 
 #include <vector>

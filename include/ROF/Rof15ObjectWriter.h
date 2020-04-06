@@ -10,9 +10,9 @@ namespace object {
 
 namespace rof {
 
-class ROFObjectWriter {
+class Rof15ObjectWriter {
 public:
-    ROFObjectWriter(support::Endian endianness);
+    Rof15ObjectWriter(support::Endian endianness);
     void Write(const object::ObjectFile& object_file, std::ostream& out) const;
 
 private:

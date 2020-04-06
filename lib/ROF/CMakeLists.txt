@@ -1,5 +1,5 @@
 add_library(ROF
-        ROFObjectWriter.cpp)
+        Rof15ObjectWriter.cpp)
 
 target_include_directories(ROF PUBLIC
         ${OS9TOOLCHAIN_MAIN_INCLUDE_DIR}/Expression

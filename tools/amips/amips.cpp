@@ -4,8 +4,8 @@
 #include "amips.h"
 
 #include "InputFileParser.h"
-#include "ROFObjectFile.h"
-#include "ROFObjectWriter.h"
+#include "Rof15ObjectFile.h"
+#include "Rof15ObjectWriter.h"
 #include "Endian.h"
 
 int main(int argc, const char* argv[]) {
@@ -27,7 +27,7 @@ int main(int argc, const char* argv[]) {
     object.assembler_version = constants::AssemblerVersion;
     object.name = "mockrof";
 
-    rof::ROFObjectWriter writer(support::Endian::big);
+    rof::Rof15ObjectWriter writer(support::Endian::big);
 
     std::fstream out_file;
     out_file.exceptions(std::fstream::badbit | std::fstream::failbit);

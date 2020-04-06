@@ -1,31 +1,36 @@
 #include <Serialization.h>
 #include <Numeric.h>
 #include <ObjectFile.h>
-#include <ROFObjectFile.h>
-#include "ROFObjectWriter.h"
+#include <Rof15ObjectFile.h>
+#include <Rof15ObjectWriter.h>
 
 #include <cassert>
 #include <limits>
+#include <utility>
 
 namespace rof {
 
 namespace {
 void AssertValid(const object::ObjectFile& object_file) {
-    auto&& Header = std::declval<ROFHeader>();
+    if (object_file.counter.uninitialized_data > support::MaxRangeOf<decltype(std::declval<Rof15Header>().StaticDataSize())>::value)
+        throw "Uninitialized counter too big for ROF.";
 
-    if (object_file.counter.uninitialized_data > support::MaxRangeOf<decltype(Header.StaticDataSize())>::value)
-        throw "Uninitialized counter too big.";
+    if (object_file.counter.initialized_data > support::MaxRangeOf<decltype(std::declval<Rof15Header>().InitializedDataSize())>::value)
+        throw "Initialized counter too big for ROF.";
 
-    if (object_file.counter.initialized_data > support::MaxRangeOf<decltype(Header.InitializedDataSize())>::value)
-        throw "Initialized counter too big.";
+    if (object_file.counter.code > support::MaxRangeOf<decltype(std::declval<Rof15Header>().CodeSize())>::value)
+        throw "Code counter too big for ROF.";
 
-    if (object_file.counter.code > support::MaxRangeOf<decltype(Header.CodeSize())>::value)
-        throw "Code counter too big.";
+    if (object_file.counter.remote_uninitialized_data > support::MaxRangeOf<decltype(std::declval<Rof15Header>().RemoteStaticDataSizeRequired())>::value)
+        throw "Remote uninitialized counter too big for ROF.";
+
+    if (object_file.counter.remote_initialized_data > support::MaxRangeOf<decltype(std::declval<Rof15Header>().RemoteInitializedDataSizeRequired())>::value)
+        throw "Remote initialized counter too big for ROF.";
 }
 
 // TODO: use logic within write method and then delete.
-ROFHeader GetHeader(const object::ObjectFile& object_file) {
-    ROFHeader header {};
+Rof15Header GetHeader(const object::ObjectFile& object_file) {
+    Rof15Header header {};
     header.TypeLanguage() = object_file.tylan;
     header.Revision() = object_file.revision;
 
@@ -40,17 +45,12 @@ ROFHeader GetHeader(const object::ObjectFile& object_file) {
     header.StaticDataSize() = object_file.counter.uninitialized_data;
     header.InitializedDataSize() = object_file.counter.initialized_data;
     header.CodeSize() = object_file.counter.code;
+    header.RequiredStackSize() = object_file.stack_size;
+    header.OffsetToEntry() = object_file.entry_offset;
+    header.OffsetToUninitializedTrapHandler() = object_file.trap_handler_offset;
 
-    // TODO: add stack size from PSect here.
-
-    // TODO: add offset to entry point here.
-
-    // TODO: add offset to uninit trap handler entry here.
-
-    // TODO: add remote static data size here.
-
-    // TODO: add remote init data size here.
-
+    header.RemoteStaticDataSizeRequired() = object_file.counter.remote_uninitialized_data;
+    header.RemoteInitializedDataSizeRequired() = object_file.counter.remote_initialized_data;
     header.DebugInfoSize() = 0; // TODO: for now, this is unimplemented
 
     // TODO: add target CPU type here.
@@ -59,12 +59,7 @@ ROFHeader GetHeader(const object::ObjectFile& object_file) {
 
     header.Name() = object_file.name;
 
-// this is just here to remind me to check that header fields are big enough to hold whatever
-// the data/code sizes end up being.
-//    if (state.counter.uninitialized_data > support::MaxRangeOf<decltype(header.StaticDataSize())>::value) {
-//        throw "Uninitialized counter got way too big!";
-//    }
-//    header.StaticDataSize() = state.counter.uninitialized_data;
+    return header;
 }
 
 std::vector<ExternDefinition> GetExternalDefinitions(const object::ObjectFile& object_file) {
@@ -86,23 +81,23 @@ std::vector<ExternDefinition> GetExternalDefinitions(const object::ObjectFile& o
 }
 
 std::vector<uint32_t> GetCode(const object::ObjectFile& object_file) {
-
+    return {};
 }
 
 std::vector<DataEntry> GetInitializedData(const object::ObjectFile& object_file) {
-
+    return {};
 }
 
 std::vector<DataEntry> GetRemoteInitializedData(const object::ObjectFile& object_file) {
-
+    return {};
 }
 }
 
-ROFObjectWriter::ROFObjectWriter(support::Endian endianness) : endianness(endianness) { }
+Rof15ObjectWriter::Rof15ObjectWriter(support::Endian endianness) : endianness(endianness) { }
 
-void ROFObjectWriter::Write(const object::ObjectFile& object_file, std::ostream& out) const {
+void Rof15ObjectWriter::Write(const object::ObjectFile& object_file, std::ostream& out) const {
     AssertValid(object_file);
-    
+
     auto header = GetHeader(object_file);
 
     const auto& extern_defs = GetExternalDefinitions(object_file);
@@ -113,7 +108,7 @@ void ROFObjectWriter::Write(const object::ObjectFile& object_file, std::ostream&
     };
 
     // Write header to file
-    serialize(static_cast<SerializableROFHeader>(header));
+    serialize(static_cast<SerializableRof15Header>(header));
 
     // Write external definition section
     auto extern_defs_count = extern_defs.size();
