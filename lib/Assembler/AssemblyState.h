@@ -11,13 +11,6 @@
 namespace assembler {
 struct AssemblyState {
     bool found_program_end = false;
-    struct {
-        size_t code;
-        size_t initialized_data;
-        size_t uninitialized_data;
-        size_t remote_initialized_data;
-        size_t remote_uninitialized_data;
-    } counter;
 
     bool in_psect = false;
     bool in_vsect = false;

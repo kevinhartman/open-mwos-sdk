@@ -37,7 +37,6 @@ void SetObjectInfo(const AssemblyState& state, object::ObjectFile& object) {
     }
     object.revision = attrev;
 
-
     auto edition = ResolveExpression(*state.result.psect.edition, state);
     if (edition > support::MaxRangeOf<decltype(object.edition)>::value) {
         throw "edition too big!";
@@ -64,6 +63,8 @@ std::unique_ptr<object::ObjectFile> Assembler::CreateResult(AssemblyState& state
     object_file->assembly_time_epoch = 0; // TODO: get current time as epoch.
 
     SetObjectInfo(state, *object_file);
+
+    return object_file;
 }
 
 Assembler::Assembler(uint16_t assembler_version, std::unique_ptr<AssemblerTarget> target)
@@ -98,8 +99,8 @@ std::unique_ptr<object::ObjectFile> Assembler::Process(const std::vector<Entry> 
             auto instruction = target->EmitInstruction(entry);
 
             // Add instruction to code section.
-            state.result.psect.code[state.counter.code] = std::move(instruction);
-            state.counter.code += instruction.size;
+            state.result.psect.code[state.result.counter.code] = std::move(instruction);
+            state.result.counter.code += instruction.size;
         } else {
             if (entry.label) {
                 // Remember the label so it can be mapped to the next appropriate counter value.

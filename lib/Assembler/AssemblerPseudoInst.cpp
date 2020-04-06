@@ -14,17 +14,18 @@ namespace {
 
 void CreateSymbolsHere(object::SymbolInfo::Type symbol_type, bool is_signed, AssemblyState& state) {
     auto counter = [symbol_type, &state]() {
+        auto& counter = state.result.counter;
         switch (symbol_type) {
             case object::SymbolInfo::Type::UninitData:
-                return state.counter.uninitialized_data;
+                return counter.uninitialized_data;
             case object::SymbolInfo::Type::RemoteUninitData:
-                return state.counter.remote_uninitialized_data;
+                return counter.remote_uninitialized_data;
             case object::SymbolInfo::Type::InitData:
-                return state.counter.initialized_data;
+                return counter.initialized_data;
             case object::SymbolInfo::Type::RemoteInitData:
-                return state.counter.remote_initialized_data;
+                return counter.remote_initialized_data;
             case object::SymbolInfo::Type::Code:
-                return state.counter.code;
+                return counter.code;
         }
     };
 
@@ -58,8 +59,8 @@ void Op_DS(const Entry& entry, AssemblyState& state) {
     auto increment = count * Size;
 
     auto& counter = state.in_remote_vsect
-        ? state.counter.remote_uninitialized_data
-        : state.counter.uninitialized_data;
+        ? state.result.counter.remote_uninitialized_data
+        : state.result.counter.uninitialized_data;
 
     // Automatically align to even boundary for word and long (according to documentation).
     if constexpr (Size > 1) {
@@ -105,13 +106,14 @@ void Op_Align(const Entry& entry, AssemblyState& state) {
         counter = support::RoundToNextPow2Multiple(counter, alignment);
     };
 
+    auto& counter = state.result.counter;
     if (state.in_vsect) {
         // Align data counters
-        align(state.in_remote_vsect ? state.counter.remote_initialized_data : state.counter.initialized_data);
-        align(state.in_remote_vsect ? state.counter.remote_uninitialized_data : state.counter.uninitialized_data);
+        align(state.in_remote_vsect ? counter.remote_initialized_data : counter.initialized_data);
+        align(state.in_remote_vsect ? counter.remote_uninitialized_data : counter.uninitialized_data);
     } else {
         // Align code section.
-        align(state.counter.code);
+        align(counter.code);
     }
 }
 

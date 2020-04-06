@@ -109,6 +109,14 @@ struct ObjectFile {
     uint16_t revision;
     uint16_t edition;
 
+    struct {
+        size_t code;
+        size_t initialized_data;
+        size_t uninitialized_data;
+        size_t remote_initialized_data;
+        size_t remote_uninitialized_data;
+    } counter;
+
     PSect psect {};
     std::vector<VSect> root_vsects {};
     std::map<std::string, SymbolInfo> global_symbols {};

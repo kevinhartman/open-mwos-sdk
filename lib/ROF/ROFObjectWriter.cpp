@@ -1,4 +1,5 @@
 #include <Serialization.h>
+#include <Numeric.h>
 #include <ObjectFile.h>
 #include <ROFObjectFile.h>
 #include "ROFObjectWriter.h"
@@ -9,31 +10,54 @@
 namespace rof {
 
 namespace {
+void AssertValid(const object::ObjectFile& object_file) {
+    auto&& Header = std::declval<ROFHeader>();
+
+    if (object_file.counter.uninitialized_data > support::MaxRangeOf<decltype(Header.StaticDataSize())>::value)
+        throw "Uninitialized counter too big.";
+
+    if (object_file.counter.initialized_data > support::MaxRangeOf<decltype(Header.InitializedDataSize())>::value)
+        throw "Initialized counter too big.";
+
+    if (object_file.counter.code > support::MaxRangeOf<decltype(Header.CodeSize())>::value)
+        throw "Code counter too big.";
+}
 
 // TODO: use logic within write method and then delete.
 ROFHeader GetHeader(const object::ObjectFile& object_file) {
     ROFHeader header {};
-    header.Name() = object_file.name;
-
-    // TODO: For now, just 0'd. not sure the format. Could be DNP3? Convert from epoch above^
-    header.AsmDate() = {0, 0, 0, 0, 0, 0};
+    header.TypeLanguage() = object_file.tylan;
+    header.Revision() = object_file.revision;
 
     // TODO: write non-zero if assembly fails? Why even produce ROF?
     header.AsmValid() = 0;
+    header.AsmVersion() = object_file.assembler_version;
 
-    header.TypeLanguage() = object_file.tylan;
-    header.Name() = object_file.name;
+    // TODO: For now, just 0'd. not sure the format. Could be DNP3? Convert from epoch above^
+    header.AsmDate() = {0, 0, 0, 0, 0, 0};
     header.Edition() = object_file.edition;
-    header.Revision() = object_file.revision;
 
-    // TODO: calculate code size
-    //    auto code_size = code.size() * sizeof(uint32_t);
-    //    assert(code_size <= std::numeric_limits<uint32_t>::max());
-    //    header.CodeSize() = code_size;
+    header.StaticDataSize() = object_file.counter.uninitialized_data;
+    header.InitializedDataSize() = object_file.counter.initialized_data;
+    header.CodeSize() = object_file.counter.code;
+
+    // TODO: add stack size from PSect here.
+
+    // TODO: add offset to entry point here.
+
+    // TODO: add offset to uninit trap handler entry here.
+
+    // TODO: add remote static data size here.
+
+    // TODO: add remote init data size here.
 
     header.DebugInfoSize() = 0; // TODO: for now, this is unimplemented
 
-    // TODO: write the rest of the header -- not yet implemented.
+    // TODO: add target CPU type here.
+
+    // TODO: add "code" information here. i.e. flags about threading etc.
+
+    header.Name() = object_file.name;
 
 // this is just here to remind me to check that header fields are big enough to hold whatever
 // the data/code sizes end up being.
@@ -77,6 +101,8 @@ std::vector<DataEntry> GetRemoteInitializedData(const object::ObjectFile& object
 ROFObjectWriter::ROFObjectWriter(support::Endian endianness) : endianness(endianness) { }
 
 void ROFObjectWriter::Write(const object::ObjectFile& object_file, std::ostream& out) const {
+    AssertValid(object_file);
+    
     auto header = GetHeader(object_file);
 
     const auto& extern_defs = GetExternalDefinitions(object_file);
