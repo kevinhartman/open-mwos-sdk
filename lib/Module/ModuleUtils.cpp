@@ -46,6 +46,7 @@ bool IsBigEndian(const char* header_data) {
     if (memcmp(header_data, i386, 2) == 0) return false;
 
     assert(false); // Unknown OS-9 Port / Arch
+    return false;
 }
 
 support::Endian EndianOf(const char* header_data) {

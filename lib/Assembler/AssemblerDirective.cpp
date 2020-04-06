@@ -34,6 +34,8 @@ void ReadPSectParams(const Entry& entry, AssemblyState& state) {
         // Params are fully specified.
 
         // TODO: validation
+        // > Any printable character may be used except a space or comma.
+        // > However, the name must begin with a non-numeric character.
         p_sect.name = params[0];
 
         p_sect.tylan = ParseExpression(params[1]);

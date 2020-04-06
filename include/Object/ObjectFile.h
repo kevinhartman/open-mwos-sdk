@@ -109,6 +109,10 @@ struct ObjectFile {
     uint16_t revision;
     uint16_t edition;
 
+    u_int32_t stack_size;
+    u_int32_t entry_offset;
+    u_int32_t trap_handler_offset;
+
     struct {
         size_t code;
         size_t initialized_data;

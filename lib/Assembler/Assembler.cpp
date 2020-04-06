@@ -22,35 +22,37 @@ namespace {
     //   been a mistake, since perhaps unresolved expressions should not leave
     //   the assembler except for serialization. I need to think through that
     //   abstraction.
+    //
+    //   Update: for now, the approach will be to keep those unresolved expressions
+    //   inside object::ObjectFile, but we will resolve them here too.
 void SetObjectInfo(const AssemblyState& state, object::ObjectFile& object) {
-    object.name = state.result.psect.name;
+    const auto& psect = state.result.psect;
 
-    auto tylan = ResolveExpression(*state.result.psect.tylan, state);
-    if (tylan > support::MaxRangeOf<decltype(object.tylan)>::value) {
-        throw "tylan too big!";
-    }
-    object.tylan = tylan;
+    const auto expr_16bit = [](std::string name, auto value) {
+        if (value > std::numeric_limits<uint16_t>::max()) {
+            throw name + " must be 16-bit expression!";
+        }
 
-    auto attrev = ResolveExpression(*state.result.psect.revision, state);
-    if (attrev > support::MaxRangeOf<decltype(object.revision)>::value) {
-        throw "attrev too big!";
-    }
-    object.revision = attrev;
+        return value;
+    };
 
-    auto edition = ResolveExpression(*state.result.psect.edition, state);
-    if (edition > support::MaxRangeOf<decltype(object.edition)>::value) {
-        throw "edition too big!";
-    }
-    object.edition = edition;
+    const auto expr_32bit = [](std::string name, auto value) {
+        if (value > std::numeric_limits<uint32_t>::max()) {
+            throw name + " must be 32-bit expression!";
+        }
 
-    // TODO: this logic should be moved to ObjectFile implementations
-//    if (state.counter.uninitialized_data > support::MaxRangeOf<decltype(header.StaticDataSize())>::value) {
-//        throw "Uninitialized counter got way too big!";
-//    }
-//    header.StaticDataSize() = state.counter.uninitialized_data;
-//
-//    // Note: this impl not done. needs to write all fields after static data size!
-//    assert(false);
+        return value;
+    };
+
+    object.name = psect.name;
+
+    object.tylan = expr_16bit("tylan", ResolveExpression(*psect.tylan, state));
+    object.revision = expr_16bit("attrev", ResolveExpression(*psect.revision, state));
+    object.edition = expr_16bit("edition", ResolveExpression(*psect.edition, state));
+
+    object.stack_size = expr_32bit("stack", ResolveExpression(*psect.stack, state));
+    object.entry_offset = expr_32bit("entrypt", ResolveExpression(*psect.entry_offset, state));
+    object.trap_handler_offset = expr_32bit("trapent", ResolveExpression(*psect.trap_handler_offset, state));
 }
 
 }
