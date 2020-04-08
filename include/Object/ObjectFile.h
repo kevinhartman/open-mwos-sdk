@@ -47,46 +47,6 @@ struct VSect {
     bool isRemote;
 };
 
-struct ExpressionMapping {
-    size_t offset;
-    size_t bit_count;
-    std::shared_ptr<expression::Expression> expression;
-};
-
-struct Instruction {
-    union {
-        uint8_t raw[sizeof(uint64_t)];
-        uint64_t u64;
-        uint32_t u32;
-        uint16_t u16;
-        uint8_t u8;
-    } data;
-    size_t size;
-    std::vector<ExpressionMapping> expr_mappings;
-};
-
-typedef size_t local_offset;
-struct PSect {
-    std::string name;
-    std::unique_ptr<expression::Expression>
-        tylan,
-        revision,
-        edition,
-        stack,
-        entry_offset,
-        trap_handler_offset;
-
-    std::vector<VSect> vsects {};
-
-    std::map<local_offset, Data> initialized_data {};
-    std::map<local_offset, Data> uninitialized_data {};
-
-    std::map<local_offset, Data> remote_initialized_data {};
-    std::map<local_offset, Data> remote_uninitialized_data {};
-
-    std::map<local_offset, Instruction> code {};
-};
-
 struct SymbolInfo {
     enum Type {
         Code,
@@ -96,7 +56,7 @@ struct SymbolInfo {
         RemoteUninitData
     } type;
 
-    bool is_signed;
+    bool is_signed; // TODO: symbols don't have sign in ROF. Why did I put this here?
     std::optional<uint32_t> value;
 };
 
@@ -121,8 +81,6 @@ struct ObjectFile {
         size_t remote_uninitialized_data;
     } counter;
 
-    PSect psect {};
-    std::vector<VSect> root_vsects {};
     std::map<std::string, SymbolInfo> global_symbols {};
     std::map<std::string, SymbolInfo> local_symbols {};
 };

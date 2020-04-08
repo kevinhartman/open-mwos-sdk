@@ -13,7 +13,6 @@
 namespace assembler {
 
 using namespace expression;
-using namespace object;
 
 struct StringToExpression {
     std::string input_expression;

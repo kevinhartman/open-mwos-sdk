@@ -26,7 +26,7 @@ namespace {
     //   Update: for now, the approach will be to keep those unresolved expressions
     //   inside object::ObjectFile, but we will resolve them here too.
 void SetObjectInfo(const AssemblyState& state, object::ObjectFile& object) {
-    const auto& psect = state.result.psect;
+    const auto& psect = state.psect;
 
     const auto expr_16bit = [](std::string name, auto value) {
         if (value > std::numeric_limits<uint16_t>::max()) {
@@ -101,7 +101,7 @@ std::unique_ptr<object::ObjectFile> Assembler::Process(const std::vector<Entry> 
             auto instruction = target->EmitInstruction(entry);
 
             // Add instruction to code section.
-            state.result.psect.code[state.result.counter.code] = std::move(instruction);
+            state.psect.code[state.result.counter.code] = std::move(instruction);
             state.result.counter.code += instruction.size;
         } else {
             if (entry.label) {

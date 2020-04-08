@@ -111,7 +111,7 @@ std::ostream& operator<<(std::ostream& os, const Expression& expr) {
 
 }
 
-namespace object {
+namespace assembler {
 std::ostream &operator<<(std::ostream &os, const ExpressionMapping &expr) {
     os << "{ offset: " << expr.offset << " bit_count: " << expr.bit_count << " expression: " << *expr.expression;
     return os;

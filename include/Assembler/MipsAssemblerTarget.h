@@ -12,7 +12,7 @@ public:
     MipsAssemblerTarget(support::Endian endianness);
     virtual ~MipsAssemblerTarget() override;
     support::Endian GetEndianness() override;
-    object::Instruction EmitInstruction(const Entry& entry) override;
+    Instruction EmitInstruction(const Entry& entry) override;
 
 private:
     support::Endian endianness;

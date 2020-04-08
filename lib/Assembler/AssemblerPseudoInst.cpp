@@ -1,7 +1,8 @@
+#include <AssemblerTypes.h>
+#include <Bitwise.h>
+#include <Expression.h>
+
 #include "AssemblyState.h"
-#include "AssemblerTypes.h"
-#include "Bitwise.h"
-#include "../../include/Expression/Expression.h"
 #include "ExpressionResolver.h"
 
 #include <iterator>
