@@ -30,6 +30,14 @@ struct DataDefinition {
     std::variant<std::string, std::unique_ptr<expression::Expression>> value;
 };
 
+struct EquDefinition {
+    std::unique_ptr<expression::Expression> value;
+};
+
+struct SetDefinition {
+    std::unique_ptr<expression::Expression> value;
+};
+
 struct VSect {
     bool isRemote;
 };
@@ -56,17 +64,14 @@ struct PSect {
     std::map<local_offset, Instruction> code {};
 
     std::map<std::string, object::SymbolInfo> symbols {};
+
+    std::map<std::string, EquDefinition> equs {};
 };
 
 struct AssemblyState {
     inline std::optional<object::SymbolInfo> GetSymbol(std::string name) {
-        auto symbol_itr = result.local_symbols.find(name);
-        if (symbol_itr != result.local_symbols.end()) {
-            return symbol_itr->second;
-        }
-
-        symbol_itr = result.global_symbols.find(name);
-        if (symbol_itr != result.global_symbols.end()) {
+        auto symbol_itr = psect.symbols.find(name);
+        if (symbol_itr != psect.symbols.end()) {
             return symbol_itr->second;
         }
 
@@ -75,9 +80,7 @@ struct AssemblyState {
 
     inline void UpdateSymbol(const Label& label, const object::SymbolInfo& symbol_info) {
         symbol_name_to_label[label.name] = label;
-
-        auto& symbols = label.is_global ? result.global_symbols : result.local_symbols;
-        symbols[label.name] = symbol_info;
+        psect.symbols[label.name] = symbol_info;
     }
 
     bool found_program_end = false;

@@ -58,6 +58,9 @@ struct SymbolInfo {
         RemoteUninitData
     } type;
 
+    bool is_global;
+
+    // Will be nullopt for equ and set
     std::optional<uint32_t> value;
 };
 

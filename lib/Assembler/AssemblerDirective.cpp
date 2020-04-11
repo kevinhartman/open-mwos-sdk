@@ -103,21 +103,26 @@ void Op_Equ(const Entry& entry, AssemblyState& state) {
     if (!entry.label)
         throw "Operation " + entry.operation.value() + " must have a label.";
 
-    auto& name = entry.label->name;
+    if (!entry.operands)
+        throw "arg: equ missing expression";
 
+    auto& name = entry.label->name;
     if (state.GetSymbol(name)) {
         // note that Set *does* allow redefinition if the existing symbol is also for a previous Set
         throw "Redefinition of label not allowed.";
     }
 
-    object::SymbolInfo symbol_info;
-    symbol_info;
+    auto expression = ParseExpression(entry.operands.value());
 
-    // TODO: finish implementaiton.
+    // Create symbol entry.
+    object::SymbolInfo symbol_info;
+    symbol_info.is_global = entry.label->is_global;
+    symbol_info.type = object::SymbolInfo::Type::Equ;
 
     state.UpdateSymbol(entry.label.value(), symbol_info);
 
-
+    // Create Equ definition.
+    state.psect.equs[name].value = std::move(expression);
 }
 
 bool HandleDirective(const Entry& entry, AssemblyState& state) {
