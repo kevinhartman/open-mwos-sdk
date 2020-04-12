@@ -61,7 +61,7 @@ void Op_Equ(const Operation& operation, AssemblyState& state) {
     operation.RequireLabel();
 
     auto operands = operation.ParseOperands();
-    auto expression = operands.Get(0).AsExpression();
+    auto expression = operands.Get(0, "expression").AsExpression();
 
     auto& entry = operation.GetEntry();
     auto& name = entry.label->name;
@@ -119,16 +119,16 @@ void Op_Psect(const Operation& operation, AssemblyState& state) {
         // TODO: validation
         // > Any printable character may be used except a space or comma.
         // > However, the name must begin with a non-numeric character.
-        p_sect.name = operands.Get(0).AsString();
+        p_sect.name = operands.Get(0, "name").AsString();
 
-        p_sect.tylan = operands.Get(1).AsExpression();
-        p_sect.revision = operands.Get(2).AsExpression();
-        p_sect.edition = operands.Get(3).AsExpression();
-        p_sect.stack = operands.Get(4).AsExpression();
-        p_sect.entry_offset = operands.Get(5).AsExpression();
+        p_sect.tylan = operands.Get(1, "typelang").AsExpression();
+        p_sect.revision = operands.Get(2, "attrev").AsExpression();
+        p_sect.edition = operands.Get(3, "edition").AsExpression();
+        p_sect.stack = operands.Get(4, "stacksize").AsExpression();
+        p_sect.entry_offset = operands.Get(5, "entrypt").AsExpression();
 
         if (operands.Count() == 7) {
-            p_sect.trap_handler_offset = operands.Get(6).AsExpression();
+            p_sect.trap_handler_offset = operands.Get(6, "trapent").AsExpression();
         }
     }
 }
@@ -142,7 +142,7 @@ void Op_Vsect(const Operation& operation, AssemblyState& state) {
 
     if (operation.ParseOperands().Count() > 0) {
         auto operands = operation.ParseOperands();
-        auto remote = operands.Get(0);
+        auto remote = operands.Get(0, "remote");
         if (remote.AsString() != "remote")
             remote.Fail("vsect operand if specified must be 'remote'");
         state.in_remote_vsect = true;

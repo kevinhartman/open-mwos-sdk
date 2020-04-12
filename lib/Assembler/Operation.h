@@ -12,14 +12,14 @@ using namespace assembler;
 
 class Operand {
 public:
-    Operand(std::string op, std::size_t index, std::string operand)
-        : op(std::move(op)), operand(std::move(operand)) {}
+    Operand(std::string op, std::size_t index, std::string operand, std::string debug_alias)
+        : op(std::move(op)), index(index), operand(std::move(operand)), debug_alias(std::move(debug_alias)) {}
 
-    std::string AsString() {
+    std::string AsString() const {
         return operand;
     }
 
-    std::unique_ptr<expression::Expression> AsExpression() {
+    std::unique_ptr<expression::Expression> AsExpression() const {
         try {
             return ParseExpression(operand);
         } catch (std::runtime_error& e) {
@@ -27,33 +27,29 @@ public:
         }
     }
 
-    void Fail(std::string requirement) {
-        throw OperandException(op, index, requirement);
+    void Fail(std::string requirement) const {
+        throw OperandException(op, index, "parameter " + debug_alias + " " + requirement);
     }
 
 private:
-    std::string op;
-    std::size_t index;
+    const std::string op;
+    const std::size_t index;
     const std::string operand;
+    const std::string debug_alias;
 };
 
 class OperandList {
 public:
-    OperandList(std::string op, std::vector<std::string> operand_strings) : op(std::move(op)) {
-        operands.reserve(operand_strings.size());
+    OperandList(std::string op, std::vector<std::string> operands)
+        : op(std::move(op)), operands(std::move(operands)) { }
 
-        for (std::size_t i = 0; i < operand_strings.size(); i++) {
-            operands.emplace_back(Operand(op, i, operand_strings.at(i)));
-        }
-    }
-
-    Operand Get(std::size_t index) const {
+    Operand Get(std::size_t index, const std::string& debug_alias) const {
         if (index >= operands.size()) {
             throw new OperandException(op, index,
                 "Operation " + op + " missing positional operand " + std::to_string(index) + ".");
         }
 
-        return operands.at(index);
+        return Operand(op, index, operands.at(index), debug_alias);
     }
 
     std::size_t Count() const {
@@ -61,7 +57,7 @@ public:
     }
 
 private:
-    std::vector<Operand> operands {};
+    std::vector<std::string> operands {};
     std::string op;
 };
 

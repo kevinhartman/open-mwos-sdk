@@ -4,6 +4,7 @@
 
 #include "AssemblyState.h"
 #include "ExpressionResolver.h"
+#include "Operation.h"
 
 #include <iterator>
 #include <unordered_map>
@@ -45,17 +46,17 @@ void CreateSymbolsHere(object::SymbolInfo::Type symbol_type, bool is_signed, Ass
 }
 
 template<size_t Size, bool IsSigned>
-void Op_DS(const Entry& entry, AssemblyState& state) {
-    if (!state.in_psect || !state.in_vsect) {
-        throw "must be in vsect within psect.";
-    }
+void Op_DS(const Operation& operation, AssemblyState& state) {
+    constexpr auto context_err_msg = "must be in vsect within psect.";
+    if (!state.in_psect)
+        operation.Fail(OperationException::Code::NeedsPSectContext, context_err_msg);
+    if (!state.in_vsect)
+        operation.Fail(OperationException::Code::NeedsVSectContext, context_err_msg);
 
-    if (!entry.operands) {
-        throw "missing size operand";
-    }
+    auto operands = operation.ParseOperands();
+    auto size_expr = operands.Get(0, "expr").AsExpression();
 
     // We need to resolve the size (count) expression *now*, since we must know by how much to increment data counter.
-    auto size_expr = ParseExpression(entry.operands.value());
     auto count = ResolveExpression(*size_expr, state);
     auto increment = count * Size;
 
@@ -69,8 +70,9 @@ void Op_DS(const Entry& entry, AssemblyState& state) {
     }
 
     // Assign label(s) to aligned relative address.
-    if (entry.label) {
-        state.pending_labels.emplace_back(entry.label.value());
+    auto label_opt = operation.GetEntry().label;
+    if (label_opt) {
+        state.pending_labels.emplace_back(label_opt.value());
     }
 
     CreateSymbolsHere(
@@ -82,24 +84,27 @@ void Op_DS(const Entry& entry, AssemblyState& state) {
     counter += increment;
 }
 
-void Op_Align(const Entry& entry, AssemblyState& state) {
+void Op_Align(const Operation& operation, AssemblyState& state) {
     if (!state.in_psect) {
-        throw "align cannot exist outside of a psect.";
+        operation.Fail(OperationException::Code::NeedsPSectContext, "must be inside psect");
     }
 
     uint32_t alignment = 2; // default
-    if (entry.operands) {
-        auto expr = ParseExpression(entry.operands.value());
+
+    auto operands = operation.ParseOperands();
+    if (operands.Count() > 0) {
+        auto operand_alignment = operands.Get(0, "alignment");
+        auto expr = operand_alignment.AsExpression();
 
         auto as_numeric = dynamic_cast<expression::NumericConstantExpression *>(expr.get());
         if (as_numeric == nullptr) {
-            throw "alignment must be numeric constant expression";
+            operand_alignment.Fail("must be a numeric constant expression");
         }
 
         alignment = as_numeric->Value();
 
         if (!support::IsPow2(alignment)) {
-            throw "alignment value must be a power of 2";
+            operand_alignment.Fail("must be power of 2");
         }
     }
 
@@ -118,11 +123,11 @@ void Op_Align(const Entry& entry, AssemblyState& state) {
     }
 }
 
-void Op_Unimplemented(const Entry& entry, AssemblyState& state) {
-    throw "pseudo instruction is unimplemented: " + entry.operation.value_or("");
+void Op_Unimplemented(const Operation& operation, AssemblyState& state) {
+    throw "pseudo instruction is unimplemented: " + operation.GetEntry().operation.value_or("");
 }
 
-typedef void (*PseudoInstFunc)(const Entry&, AssemblyState&);
+typedef void (*PseudoInstFunc)(const Operation&, AssemblyState&);
 std::unordered_map<std::string, PseudoInstFunc> pseudo_instructions = {
     { "align", Op_Align },
     { "com",   Op_Unimplemented },
@@ -168,9 +173,13 @@ std::unordered_map<std::string, PseudoInstFunc> pseudo_instructions = {
 }
 
 bool HandlePseudoInstruction(const Entry& entry, AssemblyState& state) {
+    assert(entry.operation);
+
+    Operation operation(entry, state);
+
     auto handler_kv = pseudo_instructions.find(entry.operation.value());
     if (handler_kv != pseudo_instructions.end()) {
-        handler_kv->second(entry, state);
+        handler_kv->second(operation, state);
         return true;
     }
 

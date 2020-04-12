@@ -43,6 +43,8 @@ struct OperationException : std::runtime_error {
         UnexpectedPSect,
         UnexpectedVSect,
         UnexpectedEnds,
+        NeedsPSectContext,
+        NeedsVSectContext
     };
 
     OperationException(std::string op, Code code, const std::string& cause)
