@@ -15,38 +15,59 @@ using expression::NumericConstantExpression;
 
 namespace {
 
-class Operands {
+class Operand {
 public:
-    Operands(OperationId op_id, std::vector<std::string> operands) : op_id(op_id), operands(std::move(operands)) {}
+    Operand(std::string op, std::size_t index, std::string operand)
+        : op(std::move(op)), operand(std::move(operand)) {}
+
+    std::string AsString() {
+        return operand;
+    }
+
+    std::unique_ptr<expression::Expression> AsExpression() {
+        try {
+            return ParseExpression(operand);
+        } catch (std::runtime_error& e) {
+            throw OperandException(op, index, e);
+        }
+    }
+
+    void Fail(std::string requirement) {
+        throw new OperandException(op, index, requirement);
+    }
+
+private:
+    std::string op;
+    std::size_t index;
+    const std::string operand;
+};
+
+class OperandList {
+public:
+    OperandList(std::string op, std::vector<std::string> operand_strings) : op(std::move(op)) {
+        operands.reserve(operand_strings.size());
+
+        for (std::size_t i = 0; i < operand_strings.size(); i++) {
+            operands.emplace_back(Operand(op, i, operand_strings.at(i)));
+        }
+    }
+
+    Operand Get(std::size_t index) const {
+        if (index >= operands.size()) {
+            throw new OperandException(op, index,
+                "Operation " + op + " missing positional operand " + std::to_string(index) + ".");
+        }
+
+        return operands.at(index);
+    }
 
     std::size_t Count() const {
         return operands.size();
     }
 
-    std::string GetString(std::size_t index) {
-        RequireOperand(index);
-        return operands.at(index);
-    }
-
-    std::unique_ptr<expression::Expression> GetExpression(std::size_t index) {
-        RequireOperand(index);
-
-        try {
-            return ParseExpression(operands.at(index));
-        } catch (std::runtime_error& e) {
-            throw OperandException(op_id, index, e);
-        }
-    }
-
 private:
-    void RequireOperand(std::size_t index) {
-        if (index >= operands.size()) {
-            throw OperandException(op_id, index, "Operation missing expected operand.");
-        }
-    }
-
-    OperationId op_id;
-    const std::vector<std::string> operands;
+    std::vector<Operand> operands {};
+    std::string op;
 };
 
 class Operation {
@@ -56,35 +77,36 @@ public:
 
     void RequireLabel() const {
         if (!entry.label)
-            throw OperationException(OperationId::Equ, OperationException::Code::MissingLabel,
+            throw OperationException(entry.operation.value(), OperationException::Code::MissingLabel,
                 BuildMessage("must have a label"));
     }
 
     void RequireNoOperands() const {
         if (entry.operands)
-            throw OperationException(OperationId::Equ, OperationException::Code::UnexpectedOperands,
+            throw OperationException(entry.operation.value(), OperationException::Code::UnexpectedOperands,
                 BuildMessage("cannot have operands"));
     }
 
     void RequireNoLabel() const {
         if (entry.label)
-            throw OperationException(OperationId::Equ, OperationException::Code::UnexpectedLabel,
+            throw OperationException(entry.operation.value(), OperationException::Code::UnexpectedLabel,
                 BuildMessage("cannot have a label"));
     }
 
     void RequireNoComment() const {
         if (entry.comment)
-            throw OperationException(OperationId::Equ, OperationException::Code::UnexpectedComment,
+            throw OperationException(entry.operation.value(), OperationException::Code::UnexpectedComment,
                 BuildMessage("cannot have a comment."));
     }
 
     void Fail(OperationException::Code code, std::string requirement) const {
-        throw OperationException(OperationId::Equ, code, BuildMessage(requirement));
+        throw OperationException(entry.operation.value(), code, BuildMessage(requirement));
     }
 
-    Operands ParseOperands(std::regex delimiter = std::regex(",")) const {
-        auto parsed = Split(entry.operands.value(), delimiter);
-        return Operands(OperationId::Equ, std::move(parsed));
+    OperandList ParseOperands(std::regex delimiter = std::regex(",")) const {
+        // TODO: catch split issues and return proper error
+        auto parsed = Split(entry.operands.value_or(""), std::move(delimiter));
+        return OperandList(entry.operation.value(), parsed);
     }
 
     const Entry& GetEntry() const {
@@ -92,7 +114,7 @@ public:
     }
 
 private:
-    std::string BuildMessage(std::string requirement) const {
+    std::string BuildMessage(const std::string& requirement) const {
         return "Operation " + entry.operation.value_or("[null]") + requirement + ".";
     }
 
@@ -151,14 +173,14 @@ private:
 void Op_Equ(const Operation& operation, AssemblyState& state) {
     operation.RequireLabel();
 
-    Operands operands = operation.ParseOperands();
-    auto expression = operands.GetExpression(0);
+    auto operands = operation.ParseOperands();
+    auto expression = operands.Get(0).AsExpression();
 
     auto& entry = operation.GetEntry();
     auto& name = entry.label->name;
     if (state.GetSymbol(name)) {
         // note that Set *does* allow redefinition if the existing symbol is also for a previous Set
-        throw OperationException(OperationId::Equ, OperationException::Code::DuplicateSymbol,
+        operation.Fail(OperationException::Code::DuplicateSymbol,
             "Equ name must not already be defined.");
     }
 
@@ -175,10 +197,12 @@ void Op_Equ(const Operation& operation, AssemblyState& state) {
 
 void Op_Psect(const Operation& operation, AssemblyState& state) {
     if (state.in_psect)
-        operation.Fail(OperationException::Code::UnexpectedPSect, "must not be nested in another psect");
+        operation.Fail(OperationException::Code::UnexpectedPSect,
+            "must not be nested in another psect");
 
     if (state.in_vsect)
-        operation.Fail(OperationException::Code::UnexpectedPSect, "may not appear with vsect");
+        operation.Fail(OperationException::Code::UnexpectedPSect,
+            "may not appear with vsect");
 
     if (state.psect.tylan)
         operation.Fail(OperationException::Code::UnexpectedPSect,
@@ -189,6 +213,7 @@ void Op_Psect(const Operation& operation, AssemblyState& state) {
 
     auto operands = operation.ParseOperands();
     if (operands.Count() > 7) {
+        // TODO: should this be an operand exception instead?
         operation.Fail(OperationException::Code::TooManyOperands, "must have <=7 operands");
     }
 
@@ -207,16 +232,16 @@ void Op_Psect(const Operation& operation, AssemblyState& state) {
         // TODO: validation
         // > Any printable character may be used except a space or comma.
         // > However, the name must begin with a non-numeric character.
-        p_sect.name = operands.GetString(0);
+        p_sect.name = operands.Get(0).AsString();
 
-        p_sect.tylan = operands.GetExpression(1);
-        p_sect.revision = operands.GetExpression(2);
-        p_sect.edition = operands.GetExpression(3);
-        p_sect.stack = operands.GetExpression(4);
-        p_sect.entry_offset = operands.GetExpression(5);
+        p_sect.tylan = operands.Get(1).AsExpression();
+        p_sect.revision = operands.Get(2).AsExpression();
+        p_sect.edition = operands.Get(3).AsExpression();
+        p_sect.stack = operands.Get(4).AsExpression();
+        p_sect.entry_offset = operands.Get(5).AsExpression();
 
         if (operands.Count() == 7) {
-            p_sect.trap_handler_offset = operands.GetExpression(6);
+            p_sect.trap_handler_offset = operands.Get(6).AsExpression();
         }
     }
 }
@@ -228,17 +253,70 @@ void Op_Vsect(const Operation& operation, AssemblyState& state) {
 
     state.in_vsect = true;
 
-    if (operation.GetEntry().operands) {
+    if (operation.ParseOperands().Count() > 0) {
         auto operands = operation.ParseOperands();
-        if (operands.GetString(0) != "remote") throw OperandException()"invalid operand to vsect directive";
+        auto remote = operands.Get(0);
+        if (remote.AsString() != "remote")
+            remote.Fail("vsect operand if specified must be 'remote'");
         state.in_remote_vsect = true;
     }
+}
+
+void Op_Ends(const Operation& operation, AssemblyState& state) {
+    if (!state.in_psect && !state.in_vsect) {
+        operation.Fail(OperationException::Code::UnexpectedEnds,
+            "must be in a section");
+    }
+
+    if (state.in_psect && state.in_vsect) {
+        // If we were in both, we must be exiting the vsect.
+        state.in_vsect = false;
+    } else {
+        // We're exiting either a vsect or psect. In either case, we're no longer in any section.
+        state.in_psect = false;
+        state.in_vsect = false;
+    }
+}
+
+void Op_End(const Operation& operation, AssemblyState& state) {
+    operation.RequireNoLabel();
+
+    // End of program signaled. Stop processing input lines.
+    state.found_program_end = true;
+}
+
+void Op_Unimplemented(const Operation& operation, AssemblyState& state) {
+    throw std::runtime_error("Directive is unimplemented: " + operation.GetEntry().operation.value_or(""));
 }
 
 typedef void (*DirectiveHandler)(const Operation&, AssemblyState&);
 std::unordered_map<std::string, DirectiveHandler> directives = {
     { "equ", Op_Equ },
-    { "psect", Op_Psect }
+    { "psect", Op_Psect },
+    { "vsect", Op_Vsect },
+    { "ends", Op_Vsect },
+
+    { "set", Op_Unimplemented },
+    { "nam", Op_Unimplemented },
+    { "ttl", Op_Unimplemented },
+    { "opt", Op_Unimplemented },
+    { "rept", Op_Unimplemented },
+    { "endr", Op_Unimplemented },
+    { "macro", Op_Unimplemented },
+    { "endm", Op_Unimplemented },
+
+    { "ifeq", Op_Unimplemented },
+    { "ifne", Op_Unimplemented },
+    { "iflt", Op_Unimplemented },
+    { "ifle", Op_Unimplemented },
+    { "ifgt", Op_Unimplemented },
+    { "ifge", Op_Unimplemented },
+    { "ifdef", Op_Unimplemented },
+    { "ifndef", Op_Unimplemented },
+
+    { "endc", Op_Unimplemented },
+    { "use", Op_Unimplemented },
+    { "spc", Op_Unimplemented },
 };
 
 bool HandleDirective(const Entry& entry, AssemblyState& state) {
@@ -248,120 +326,11 @@ bool HandleDirective(const Entry& entry, AssemblyState& state) {
 
     auto handler_kv = directives.find(entry.operation.value());
     if (handler_kv != directives.end()) {
-        handler_kv->second(operation, entry, state);
+        handler_kv->second(operation, state);
         return true;
     }
 
     return false;
 }
 
-bool HandleDirective1(const Entry& entry, AssemblyState& state) {
-    auto require_no_label = [&entry]() {
-        if (entry.label)
-            throw "Operation " + entry.operation.value_or("[null]") + " cannot have a label.";
-    };
-
-    auto require_no_comment = [&entry]() {
-        if (entry.comment)
-            throw "Operation " + entry.operation.value_or("[null]") + "cannot have a comment.";
-    };
-
-    bool handled = false;
-    auto op = [&entry, &handled](const auto& str) {
-        if (entry.operation.value() == str) {
-            return (handled = true);
-        }
-        return false;
-    };
-
-    if (op("psect"))
-    {
-        if (state.in_psect) throw "nested psects aren't allowed";
-        if (state.in_vsect) throw "psect may not appear with vsect";
-        if (state.psect.tylan) throw "psect already initialized. only 1 psect allowed per file";
-
-        state.in_psect = true;
-        ReadPSectParams(entry, state);
-    }
-    else if (op("vsect"))
-    {
-        if (state.in_vsect) throw "nested vsects aren't allowed";
-        state.in_vsect = true;
-
-        if (entry.operands) {
-            if (entry.operands.value() != "remote") throw "invalid operand to vsect directive";
-            state.in_remote_vsect = true;
-        }
-    }
-    else if (op("ends"))
-    {
-        if (!state.in_psect && !state.in_vsect) {
-            throw "not in section";
-        }
-
-        if (state.in_psect && state.in_vsect) {
-            // If we were in both, we must be exiting the vsect.
-            state.in_vsect = false;
-        } else {
-            // We're exiting either a vsect or psect. In either case, we're no longer in any section.
-            state.in_psect = false;
-            state.in_vsect = false;
-        }
-    }
-    else if (op("equ")) {
-        /*
-         * Equs and set declarations can actually be used externally (from other ROFs).
-         */
-        Op_Equ(entry, state);
-    }
-    else if (op("set")) {
-        throw "unimplemented";
-    }
-    else if (op("nam")) {
-        throw "unimplemented";
-    }
-    else if (op("ttl")) {
-        throw "unimplemented";
-    }
-    else if (op("opt")) {
-        throw "unimplemented";
-    }
-    else if (op("rept")) {
-        throw "unimplemented.";
-    }
-    else if (op("endr")) {
-        throw "unimplemented.";
-    }
-    else if (op("macro"))
-    {
-        throw "unimplemented.";
-    }
-    else if (op("endm"))
-    {
-        throw "unimplemented.";
-    }
-    else if (op("ifeq") || op("ifne") || op("iflt") || op("ifle") || op("ifgt") || op("ifge") || op("ifdef") || op("ifndef"))
-    {
-        throw "unimplemented.";
-    }
-    else if (op("endc"))
-    {
-        throw "unimplemented.";
-    }
-    else if (op("use"))
-    {
-        throw "unimplemented.";
-    }
-    else if (op("spc")) {
-        throw "unimplemented.";
-    }
-    else if (op("end"))
-    {
-        require_no_label();
-        // End of program signaled. Stop processing input lines.
-        state.found_program_end = true;
-    }
-
-    return handled;
-}
 }

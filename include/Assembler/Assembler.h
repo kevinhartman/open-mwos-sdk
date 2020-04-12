@@ -32,10 +32,6 @@ private:
     std::unique_ptr<AssemblerTarget> target;
 };
 
-enum class OperationId {
-    Equ
-};
-
 struct OperationException : std::runtime_error {
     enum class Code {
         MissingLabel,
@@ -46,24 +42,25 @@ struct OperationException : std::runtime_error {
         DuplicateSymbol,
         UnexpectedPSect,
         UnexpectedVSect,
+        UnexpectedEnds,
     };
 
-    OperationException(OperationId op, Code code, const std::string& cause)
-        : runtime_error(cause), op(op), code(code) {}
+    OperationException(std::string op, Code code, const std::string& cause)
+        : runtime_error(cause), op(std::move(op)), code(code) {}
 
-    OperationId op;
+    std::string op;
     Code code;
 };
 
 struct OperandException : std::runtime_error {
-    OperandException(OperationId op, std::size_t position, const std::string& cause)
-        : op(op), position(position), runtime_error(cause) {}
+    OperandException(std::string op, std::size_t position, const std::string& cause)
+        : op(std::move(op)), position(position), runtime_error(cause) {}
 
-    OperandException(OperationId op, std::size_t position, const std::runtime_error& cause)
-        : op(op), position(position), runtime_error(cause.what()), internal_exception(cause) {}
+    OperandException(std::string op, std::size_t position, const std::runtime_error& cause)
+        : op(std::move(op)), position(position), runtime_error(cause.what()), internal_exception(cause) {}
 
     std::optional<std::runtime_error> internal_exception {};
-    OperationId op;
+    std::string op;
     std::size_t position;
 };
 
