@@ -45,6 +45,48 @@ void CreateSymbolsHere(object::SymbolInfo::Type symbol_type, bool is_signed, Ass
     }
 }
 
+/**
+ * Ultra C Usage Guide:
+ *
+ * > Syntax
+ * >   <label> ds.<size> <expr>
+ * > Description
+ * >   ds is used within a vsect to declare storage for uninitialized variables in the data area.
+ * >   The .<size> extension can be:
+ * >   - .b for bytes
+ * >   - .sb for signed bytes
+ * >   - .w for words (16-bit, default)
+ * >   - .sw for words (16-bit)
+ * >   - .l for longwords (32-bit)
+ * >   - .sl for signed longwords (32-bit)
+ * >
+ * >  <expr> specifies the size of the variable in bytes, words, or longwords depending on the size
+ * >  given for the ds extension. This value is added to the appropriate uninitialized data location
+ * >  counter in order to update it.
+ * >
+ * >  When ds is used to declare variables, a label is usually specified which is assigned the
+ * >  variable’s relative address. In OS-9 for 68K and OS-9, the address is not absolute.
+ * >  Instead, indexed addressing modes are used to access variables. The actual relative
+ * >  address is not assigned until the linker processes the ROF.
+ *
+ * Notes:
+ * The <expr> field seems to support expressions with EQU and SET names, but not
+ * data or code references.
+ *
+ * TODO:
+ *   - EQU and SETs in <expr> names will only work if they were defined lexically
+ *     before the current DS directive. This is correct behavior for Set but not
+ *     for EQU. We should support EQU defined anywhere, which would require 2-pass
+ *     implementation.
+ *   - We currently allow code and data references in the expression if they
+ *     were defined earlier, but this behavior isn't supported based on
+ *     tests.
+ *
+ * @tparam Size
+ * @tparam IsSigned
+ * @param operation
+ * @param state
+ */
 template<size_t Size, bool IsSigned>
 void Op_DS(const Operation& operation, AssemblyState& state) {
     constexpr auto context_err_msg = "must be in vsect within psect.";
@@ -84,6 +126,39 @@ void Op_DS(const Operation& operation, AssemblyState& state) {
     counter += increment;
 }
 
+/**
+ * Ultra C Usage Guide:
+ *
+ * > Syntax
+ * >   align <alignment boundary>
+ * > Description
+ * >   align aligns the next generated code or next assigned data offset on
+ * >   some byte boundary in memory. If the current value of the instruction
+ * >   counter is not aligned to the alignment boundary, sufficient zero bytes
+ * >   are inserted in the object code to force the desired alignment.
+ * >
+*  > <alignment boundary> specifies the alignment to use. If <alignment boundary>
+ * > is not specified, align uses an alignment boundary of two bytes. <alignment boundary>
+ * > must be a power of two.
+ * >
+ * > If align is specified in a vsect, the assembler aligns both the initialized
+ * > and uninitialized location counters.
+ * >
+ * > align is generally used after odd length constant tables, character strings,
+ * > or character data are embedded in the object code.
+ *
+ * Notes:
+ * Align is allowed to accept expressions that include EQU and SET names, but not
+ * code or data references.
+ *
+ * TODO:
+ *   - Currently, this implementation only allows numeric constant expressions,
+ *     but it should support any expression as long as it does not include
+ *     data and code reference names.
+ *
+ * @param operation
+ * @param state
+ */
 void Op_Align(const Operation& operation, AssemblyState& state) {
     if (!state.in_psect) {
         operation.Fail(OperationException::Code::NeedsPSectContext, "must be inside psect");
