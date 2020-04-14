@@ -32,8 +32,13 @@ using expression::NumericConstantExpression;
  *
  * Additional Notes:
  *
- * Expression trees can include EQU values, which are considered EQU reference types (they
- * are not simply numeric constants).
+ * Expression trees can include local EQU values, which are not just numeric constants, but
+ * are instead references of type EQU. The value of the reference must be a numeric constant.
+ *
+ * TODO:
+ *  This means that if the referenced local EQU itself references an external name, the local
+ *  EQU's expression probably needs to be expanded into the callsite reference, so that the
+ *  EQU's external reference becomes the callsite's external reference.
  *
  * The label CAN be global, which will result in an entry in the External Definition
  * section of the ROF.
@@ -45,14 +50,15 @@ using expression::NumericConstantExpression;
  *
  * Rules for local EQUs:
  * - They CAN reference external names.
+ *     => the EQU's expression must get injected into the expressions that use it.
  * - They can only reference other local names that do NOT reference external names.
  *     TODO: why?
  *
  * TODO:
  *   - Try using an EQU that references a non-equ external reference. What happens?
  *     What is the value stored in the expression tree?
- *   - Does order matter? Equs *can* have expressions which use names defined later,
- *     lexically. But can order change anything?
+ *   - Try using an EQU that references an external name from a constexpr.
+ *   - Should EQU support multiple labels?
  *
  * @param entry
  * @param state
@@ -72,14 +78,29 @@ void Op_Equ(const Operation& operation, AssemblyState& state) {
     }
 
     // Create Equ definition.
+    // Note: these are for use by expression trees in other operations in this translation unit. We don't need to enqueue
+    //       any sort of evaluation for these, since referencing ops will do that.
     state.psect.equs[name].value = std::move(expression);
 
-    // Create symbol entry.
-    object::SymbolInfo symbol_info;
-    symbol_info.is_global = entry.label->is_global;
-    symbol_info.type = object::SymbolInfo::Type::Equ;
+    if (entry.label->is_global) {
+        // For a global EQU, we must create an external definition. We do this for now by
+        // creating a "global" symbol entry with Type::EQU.
+        // TODO:
+        //  - It might be better to instead have a separate list of external definitions in object::ObjectFile.
+        //    This is because other ROF tools don't consider Equs and Set to be symbols (but assembler's -s option seems to),
+        //    so perhaps we should treat them as just external defs.
+        //  - We only add such symbols for global Equs because they cannot reference external names, and thus
+        //    we can resolve them to constants in the second pass. Perhaps we should add symbols for local equs too,
+        //    since the assembler's -s option shows local equs too. But, we would need to track them differently,
+        //    since they can include external references, and thus cannot be encoded as a constant integer.
+        state.second_pass_queue.emplace_back([&label = entry.label](AssemblyState &state) {
+            object::SymbolInfo symbol_info;
+            symbol_info.is_global = label->is_global;
+            symbol_info.type = object::SymbolInfo::Type::Equ;
 
-    state.UpdateSymbol(entry.label.value(), symbol_info);
+            state.UpdateSymbol(label.value(), symbol_info);
+        });
+    }
 }
 
 void Op_Psect(const Operation& operation, AssemblyState& state) {
@@ -96,7 +117,7 @@ void Op_Psect(const Operation& operation, AssemblyState& state) {
             "psect already initialized. only 1 psect allowed per file");
 
     state.in_psect = true;
-    PSect& p_sect = state.psect;
+    auto& p_sect = state.psect;
 
     auto operands = operation.ParseOperands();
     if (operands.Count() > 7) {
@@ -131,6 +152,19 @@ void Op_Psect(const Operation& operation, AssemblyState& state) {
             p_sect.trap_handler_offset = operands.Get(6, "trapent").AsExpression();
         }
     }
+
+    state.second_pass_queue.emplace_back([&p_sect = state.psect](AssemblyState& state) {
+        auto& result = state.result;
+
+        // TODO: remove state parameter. Note the RHS exprs are using p_sect from capture
+        result.name = p_sect.name;
+        result.tylan = ResolveExpression(*p_sect.tylan, state);
+        result.revision = ResolveExpression(*p_sect.revision, state);
+        result.edition = ResolveExpression(*p_sect.edition, state);
+        result.stack_size = ResolveExpression(*p_sect.stack, state);
+        result.entry_offset = ResolveExpression(*p_sect.entry_offset, state);
+        result.trap_handler_offset = ResolveExpression(*p_sect.trap_handler_offset, state);
+    });
 }
 
 void Op_Vsect(const Operation& operation, AssemblyState& state) {
@@ -144,7 +178,7 @@ void Op_Vsect(const Operation& operation, AssemblyState& state) {
         auto operands = operation.ParseOperands();
         auto remote = operands.Get(0, "remote");
         if (remote.AsString() != "remote")
-            remote.Fail("vsect operand if specified must be 'remote'");
+            remote.Fail("vsect operand if specified must be the string literal 'remote'");
         state.in_remote_vsect = true;
     }
 }
@@ -163,6 +197,8 @@ void Op_Ends(const Operation& operation, AssemblyState& state) {
         state.in_psect = false;
         state.in_vsect = false;
     }
+
+    // TODO: should we enqueue a task to emit vsect or psect processing?
 }
 
 void Op_End(const Operation& operation, AssemblyState& state) {

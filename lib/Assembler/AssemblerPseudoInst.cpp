@@ -12,38 +12,12 @@
 
 namespace assembler {
 
+// TODO:
+//   - Operations which manipulate the various counters often include what are effectively
+//     constant expressions (e.g. align 4+4). When these include external references, a
+//     clear error message should inform the user that these expressions must be constexpr.
+
 namespace {
-
-void CreateSymbolsHere(object::SymbolInfo::Type symbol_type, bool is_signed, AssemblyState& state) {
-    auto counter = [symbol_type, &state]() {
-        auto& counter = state.result.counter;
-        switch (symbol_type) {
-            case object::SymbolInfo::Type::UninitData:
-                return counter.uninitialized_data;
-            case object::SymbolInfo::Type::RemoteUninitData:
-                return counter.remote_uninitialized_data;
-            case object::SymbolInfo::Type::InitData:
-                return counter.initialized_data;
-            case object::SymbolInfo::Type::RemoteInitData:
-                return counter.remote_initialized_data;
-            case object::SymbolInfo::Type::Code:
-                return counter.code;
-        }
-    };
-
-    for (auto& label : state.pending_labels) {
-        if (state.symbol_name_to_label.count(label.name) > 0) {
-            throw "symbol is already defined!";
-        }
-
-        // Map symbol name to original label for assembly state.
-        state.symbol_name_to_label[label.name] = label;
-
-        // Add symbol to result object file.
-        auto& symbols = label.is_global ? state.result.global_symbols : state.result.local_symbols;
-        symbols[label.name] = object::SymbolInfo { symbol_type, is_signed, counter() };
-    }
-}
 
 /**
  * Ultra C Usage Guide:
@@ -75,9 +49,8 @@ void CreateSymbolsHere(object::SymbolInfo::Type symbol_type, bool is_signed, Ass
  *
  * TODO:
  *   - EQU and SETs in <expr> names will only work if they were defined lexically
- *     before the current DS directive. This is correct behavior for Set but not
- *     for EQU. We should support EQU defined anywhere, which would require 2-pass
- *     implementation.
+ *     before the current DS directive. This is correct behavior for Set but that's
+ *     not clear in the case of EQU.
  *   - We currently allow code and data references in the expression if they
  *     were defined earlier, but this behavior isn't supported based on
  *     tests.
@@ -88,15 +61,21 @@ void CreateSymbolsHere(object::SymbolInfo::Type symbol_type, bool is_signed, Ass
  * @param state
  */
 template<size_t Size, bool IsSigned>
-void Op_DS(const Operation& operation, AssemblyState& state) {
+void Op_DS(std::unique_ptr<Operation> operation, AssemblyState& state) {
     constexpr auto context_err_msg = "must be in vsect within psect.";
     if (!state.in_psect)
-        operation.Fail(OperationException::Code::NeedsPSectContext, context_err_msg);
+        operation->Fail(OperationException::Code::NeedsPSectContext, context_err_msg);
     if (!state.in_vsect)
-        operation.Fail(OperationException::Code::NeedsVSectContext, context_err_msg);
+        operation->Fail(OperationException::Code::NeedsVSectContext, context_err_msg);
 
-    auto operands = operation.ParseOperands();
+    auto operands = operation->ParseOperands();
     auto size_expr = operands.Get(0, "expr").AsExpression();
+
+    // If a label was provided inline, add it to pending labels.
+    auto label_opt = operation->GetEntry().label;
+    if (label_opt) {
+        state.pending_labels.emplace_back(label_opt.value());
+    }
 
     // We need to resolve the size (count) expression *now*, since we must know by how much to increment data counter.
     auto count = ResolveExpression(*size_expr, state);
@@ -111,19 +90,27 @@ void Op_DS(const Operation& operation, AssemblyState& state) {
         counter = support::RoundToNextPow2Multiple(counter, 2);
     }
 
-    // Assign label(s) to aligned relative address.
-    auto label_opt = operation.GetEntry().label;
-    if (label_opt) {
-        state.pending_labels.emplace_back(label_opt.value());
+    // Consume pending labels here and reinitialize them to empty.
+    std::vector<Label> labels {};
+    std::swap(state.pending_labels, labels);
+
+    for (auto& label : labels) {
+        if (state.GetSymbol(label.name)) {
+            operation->Fail(OperationException::Code::DuplicateSymbol,
+                "label must not be previously defined");
+        }
+
+        state.UpdateSymbol(label, object::SymbolInfo {
+            state.in_remote_vsect
+                ? object::SymbolInfo::Type::RemoteUninitData
+                : object::SymbolInfo::Type::UninitData,
+            label.is_global,
+            counter
+        });
+
+        // Advance counter now that labels are mapped.
+        counter += increment;
     }
-
-    CreateSymbolsHere(
-        state.in_remote_vsect ? object::SymbolInfo::Type::RemoteUninitData : object::SymbolInfo::Type::UninitData,
-        IsSigned,
-        state);
-
-    // Advance counter now that labels are mapped.
-    counter += increment;
 }
 
 /**
@@ -159,14 +146,14 @@ void Op_DS(const Operation& operation, AssemblyState& state) {
  * @param operation
  * @param state
  */
-void Op_Align(const Operation& operation, AssemblyState& state) {
+void Op_Align(std::unique_ptr<Operation> operation, AssemblyState& state) {
     if (!state.in_psect) {
-        operation.Fail(OperationException::Code::NeedsPSectContext, "must be inside psect");
+        operation->Fail(OperationException::Code::NeedsPSectContext, "must be inside psect");
     }
 
     uint32_t alignment = 2; // default
 
-    auto operands = operation.ParseOperands();
+    auto operands = operation->ParseOperands();
     if (operands.Count() > 0) {
         auto operand_alignment = operands.Get(0, "alignment");
         auto expr = operand_alignment.AsExpression();
@@ -198,11 +185,11 @@ void Op_Align(const Operation& operation, AssemblyState& state) {
     }
 }
 
-void Op_Unimplemented(const Operation& operation, AssemblyState& state) {
-    throw "pseudo instruction is unimplemented: " + operation.GetEntry().operation.value_or("");
+void Op_Unimplemented(std::unique_ptr<Operation> operation, AssemblyState& state) {
+    throw "pseudo instruction is unimplemented: " + operation->GetEntry().operation.value_or("");
 }
 
-typedef void (*PseudoInstFunc)(const Operation&, AssemblyState&);
+typedef void (*PseudoInstFunc)(std::unique_ptr<Operation>, AssemblyState&);
 std::unordered_map<std::string, PseudoInstFunc> pseudo_instructions = {
     { "align", Op_Align },
     { "com",   Op_Unimplemented },
@@ -250,11 +237,11 @@ std::unordered_map<std::string, PseudoInstFunc> pseudo_instructions = {
 bool HandlePseudoInstruction(const Entry& entry, AssemblyState& state) {
     assert(entry.operation);
 
-    Operation operation(entry, state);
+    auto operation = std::make_unique<Operation>(entry, state);
 
     auto handler_kv = pseudo_instructions.find(entry.operation.value());
     if (handler_kv != pseudo_instructions.end()) {
-        handler_kv->second(operation, state);
+        handler_kv->second(std::move(operation), state);
         return true;
     }
 

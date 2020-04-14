@@ -5,6 +5,7 @@
 #include <Expression.h>
 #include <ObjectFile.h>
 
+#include <functional>
 #include <map>
 #include <optional>
 #include <vector>
@@ -69,6 +70,17 @@ struct PSect {
 };
 
 struct AssemblyState {
+
+
+    inline std::optional<Label> GetLabel(std::string name) {
+        auto symbol_itr = symbol_name_to_label.find(name);
+        if (symbol_itr != symbol_name_to_label.end()) {
+            return symbol_itr->second;
+        }
+
+        return std::nullopt;
+    }
+
     inline std::optional<object::SymbolInfo> GetSymbol(std::string name) {
         auto symbol_itr = psect.symbols.find(name);
         if (symbol_itr != psect.symbols.end()) {
@@ -83,6 +95,24 @@ struct AssemblyState {
         psect.symbols[label.name] = symbol_info;
     }
 
+    inline std::size_t& GetCounter(object::SymbolInfo::Type symbol_type) {
+        auto& counter = result.counter;
+        switch (symbol_type) {
+            case object::SymbolInfo::Type::UninitData:
+                return counter.uninitialized_data;
+            case object::SymbolInfo::Type::RemoteUninitData:
+                return counter.remote_uninitialized_data;
+            case object::SymbolInfo::Type::InitData:
+                return counter.initialized_data;
+            case object::SymbolInfo::Type::RemoteInitData:
+                return counter.remote_initialized_data;
+            case object::SymbolInfo::Type::Code:
+                return counter.code;
+            default:
+                assert(false);
+        }
+    }
+
     bool found_program_end = false;
 
     bool in_psect = false;
@@ -93,6 +123,14 @@ struct AssemblyState {
 
     PSect psect {};
     std::vector<VSect> root_vsects {};
+
+    // TODO: this design raises a few interesting considerations. For example:
+    //   - Counter values (probably among other things) should only be allowed to be manipulated in the first pass.
+    //     What if instead of making the state accessible to both passes, we only allow the second pass write access
+    //     to the result object file, and only allow the first pass write access to the state?
+    std::vector<std::function<void(AssemblyState&)>> second_pass_queue {};
+    std::vector<std::function<void()>> second_pass_queue2 {};
+
     object::ObjectFile result {};
 };
 }
