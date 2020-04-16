@@ -1,3 +1,5 @@
+#include "AssemblerPseudoInstHandler.h"
+
 #include <AssemblerTypes.h>
 #include <Bitwise.h>
 #include <Expression.h>
@@ -234,7 +236,9 @@ std::unordered_map<std::string, PseudoInstFunc> pseudo_instructions = {
 };
 }
 
-bool HandlePseudoInstruction(const Entry& entry, AssemblyState& state) {
+AssemblerPseudoInstHandler::~AssemblerPseudoInstHandler() = default;
+
+bool AssemblerPseudoInstHandler::Handle(const Entry& entry, AssemblyState& state) {
     assert(entry.operation);
 
     auto operation = std::make_unique<Operation>(entry, state);

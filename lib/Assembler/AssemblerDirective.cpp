@@ -1,3 +1,5 @@
+#include "AssemblerDirectiveHandler.h"
+
 #include <Expression.h>
 
 #include <Assembler.h>
@@ -247,7 +249,9 @@ std::unordered_map<std::string, DirectiveHandler> directives = {
     { "end", Op_End},
 };
 
-bool HandleDirective(const Entry& entry, AssemblyState& state) {
+AssemblerDirectiveHandler::~AssemblerDirectiveHandler() = default;
+
+bool AssemblerDirectiveHandler::Handle(const Entry& entry, AssemblyState& state) {
     assert(entry.operation);
 
     Operation operation(entry, state);

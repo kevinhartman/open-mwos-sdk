@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
@@ -12,6 +13,7 @@ namespace object {
 namespace assembler {
 
 class AssemblyState;
+class AssemblerOperationHandler;
 class AssemblerTarget;
 class Entry;
 
@@ -30,6 +32,7 @@ protected:
 private:
     uint16_t assembler_version;
     std::unique_ptr<AssemblerTarget> target;
+    std::vector<std::unique_ptr<AssemblerOperationHandler>> op_handlers;
 };
 
 struct OperationException : std::runtime_error {

@@ -1,4 +1,6 @@
 #include "Assembler.h"
+#include "AssemblerDirectiveHandler.h"
+#include "AssemblerPseudoInstHandler.h"
 #include "AssemblerTypes.h"
 #include "AssemblerTarget.h"
 #include "AssemblyState.h"
@@ -10,9 +12,6 @@
 #include <vector>
 
 namespace assembler {
-
-extern bool HandlePseudoInstruction(const Entry &entry, AssemblyState &state);
-extern bool HandleDirective(const Entry &entry, AssemblyState &state);
 
 namespace {
 
@@ -70,30 +69,34 @@ std::unique_ptr<object::ObjectFile> Assembler::CreateResult(AssemblyState& state
 }
 
 Assembler::Assembler(uint16_t assembler_version, std::unique_ptr<AssemblerTarget> target)
-    : assembler_version(assembler_version), target(std::move(target)) { }
+    : assembler_version(assembler_version), target(std::move(target))
+{
+    op_handlers.emplace_back(std::make_unique<AssemblerDirectiveHandler>());
+    op_handlers.emplace_back(std::make_unique<AssemblerPseudoInstHandler>());
+}
+
 Assembler::~Assembler() = default;
-
-bool Assembler::HandlePseudoInstruction(const Entry& entry, AssemblyState& state) {
-    return assembler::HandlePseudoInstruction(entry, state);
-}
-
-bool Assembler::HandleDirective(const Entry& entry, AssemblyState& state) {
-    return assembler::HandleDirective(entry, state);
-}
 
 std::unique_ptr<object::ObjectFile> Assembler::Process(const std::vector<Entry> &listing) {
     AssemblyState state {};
 
     for (auto& entry : listing) {
         if (state.found_program_end) {
-            return CreateResult(state);
+            break;
         }
 
         if (entry.operation) {
-            if (HandleDirective(entry, state)) continue;
-            if (HandlePseudoInstruction(entry, state)) continue;
+            for (auto& handler : op_handlers) {
+                if (handler->Handle(entry, state)) continue;
+            }
+
+            // TODO: maybe it's cleaner to just register CPU instruction handling
+            //       as a separate handler (perhaps CPUInstructionHandler, which itself
+            //       would take the AssemblerTarget instance instead of that being provided
+            //       to the Assembler class).
 
             // This must be a CPU instruction.
+            // TODO: check this conditional it looks odd
             if (!(state.in_psect && !state.in_vsect)) {
                 throw "target instruction must be inside the psect";
             }
