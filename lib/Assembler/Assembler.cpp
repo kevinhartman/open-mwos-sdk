@@ -102,10 +102,11 @@ std::unique_ptr<object::ObjectFile> Assembler::Process(const std::vector<Entry> 
             }
 
             auto instruction = target->EmitInstruction(entry);
+            auto instruction_size = instruction.size;
 
             // Add instruction to code section.
-            state.psect.code[state.result.counter.code] = std::move(instruction);
-            state.result.counter.code += instruction.size;
+            state.psect.code[state.result->counter.code] = std::move(instruction);
+            state.result->counter.code += instruction_size;
         } else {
             if (entry.label) {
                 // Remember the label so it can be mapped to the next appropriate counter value.
