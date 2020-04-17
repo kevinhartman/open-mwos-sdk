@@ -25,33 +25,33 @@ namespace {
     //   Update: for now, the approach will be to keep those unresolved expressions
     //   inside object::ObjectFile, but we will resolve them here too.
 void SetObjectInfo(const AssemblyState& state, object::ObjectFile& object) {
-    const auto& psect = state.psect;
-
-    const auto expr_16bit = [](std::string name, auto value) {
-        if (value > std::numeric_limits<uint16_t>::max()) {
-            throw name + " must be 16-bit expression!";
-        }
-
-        return value;
-    };
-
-    const auto expr_32bit = [](std::string name, auto value) {
-        if (value > std::numeric_limits<uint32_t>::max()) {
-            throw name + " must be 32-bit expression!";
-        }
-
-        return value;
-    };
-
-    object.name = psect.name;
-
-    object.tylan = expr_16bit("tylan", ResolveExpression(*psect.tylan, state));
-    object.revision = expr_16bit("attrev", ResolveExpression(*psect.revision, state));
-    object.edition = expr_16bit("edition", ResolveExpression(*psect.edition, state));
-
-    object.stack_size = expr_32bit("stack", ResolveExpression(*psect.stack, state));
-    object.entry_offset = expr_32bit("entrypt", ResolveExpression(*psect.entry_offset, state));
-    object.trap_handler_offset = expr_32bit("trapent", ResolveExpression(*psect.trap_handler_offset, state));
+//    const auto& psect = state.psect;
+//
+//    const auto expr_16bit = [](std::string name, auto value) {
+//        if (value > std::numeric_limits<uint16_t>::max()) {
+//            throw name + " must be 16-bit expression!";
+//        }
+//
+//        return value;
+//    };
+//
+//    const auto expr_32bit = [](std::string name, auto value) {
+//        if (value > std::numeric_limits<uint32_t>::max()) {
+//            throw name + " must be 32-bit expression!";
+//        }
+//
+//        return value;
+//    };
+//
+//    object.name = psect.name;
+//
+//    object.tylan = expr_16bit("tylan", ResolveExpression(*psect.tylan, state));
+//    object.revision = expr_16bit("attrev", ResolveExpression(*psect.revision, state));
+//    object.edition = expr_16bit("edition", ResolveExpression(*psect.edition, state));
+//
+//    object.stack_size = expr_32bit("stack", ResolveExpression(*psect.stack, state));
+//    object.entry_offset = expr_32bit("entrypt", ResolveExpression(*psect.entry_offset, state));
+//    object.trap_handler_offset = expr_32bit("trapent", ResolveExpression(*psect.trap_handler_offset, state));
 }
 
 }
@@ -86,27 +86,30 @@ std::unique_ptr<object::ObjectFile> Assembler::Process(const std::vector<Entry> 
         }
 
         if (entry.operation) {
-            for (auto& handler : op_handlers) {
-                if (handler->Handle(entry, state)) continue;
+            auto try_handle = [&entry, &state](auto& handler) {
+                return handler->Handle(entry, state);
+            };
+
+            if (!std::any_of(op_handlers.begin(), op_handlers.end(), try_handle)) {
+                // This must be a CPU instruction.
+
+                // TODO: maybe it's cleaner to just register CPU instruction handling
+                //       as a separate handler (perhaps CPUInstructionHandler, which itself
+                //       would take the AssemblerTarget instance instead of that being provided
+                //       to the Assembler class).
+
+                // TODO: check this conditional it looks odd
+                if (!(state.in_psect && !state.in_vsect)) {
+                    throw "target instruction must be inside the psect";
+                }
+
+                auto instruction = target->EmitInstruction(entry);
+                auto instruction_size = instruction.size;
+
+                // Add instruction to code section.
+                state.psect.code[state.result->counter.code] = std::move(instruction);
+                state.result->counter.code += instruction_size;
             }
-
-            // TODO: maybe it's cleaner to just register CPU instruction handling
-            //       as a separate handler (perhaps CPUInstructionHandler, which itself
-            //       would take the AssemblerTarget instance instead of that being provided
-            //       to the Assembler class).
-
-            // This must be a CPU instruction.
-            // TODO: check this conditional it looks odd
-            if (!(state.in_psect && !state.in_vsect)) {
-                throw "target instruction must be inside the psect";
-            }
-
-            auto instruction = target->EmitInstruction(entry);
-            auto instruction_size = instruction.size;
-
-            // Add instruction to code section.
-            state.psect.code[state.result->counter.code] = std::move(instruction);
-            state.result->counter.code += instruction_size;
         } else {
             if (entry.label) {
                 // Remember the label so it can be mapped to the next appropriate counter value.
@@ -115,7 +118,12 @@ std::unique_ptr<object::ObjectFile> Assembler::Process(const std::vector<Entry> 
         }
     }
 
-    return CreateResult(state);
+    // Invoke second pass.
+    for (auto& action : state.second_pass_queue) {
+        action(state);
+    }
+
+    return std::move(state.result);
 }
 
 }

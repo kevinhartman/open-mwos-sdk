@@ -69,7 +69,7 @@ void Op_Equ(const Operation& operation, AssemblyState& state) {
     operation.RequireLabel();
 
     auto operands = operation.ParseOperands();
-    auto expression = operands.Get(0, "expression").AsExpression();
+    auto expression_operand = operands.GetExpression(0, "expression");
 
     auto& entry = operation.GetEntry();
     auto& name = entry.label->name;
@@ -82,7 +82,7 @@ void Op_Equ(const Operation& operation, AssemblyState& state) {
     // Create Equ definition.
     // Note: these are for use by expression trees in other operations in this translation unit. We don't need to enqueue
     //       any sort of evaluation for these, since referencing ops will do that.
-    state.psect.equs[name].value = std::move(expression);
+    state.psect.equs[name] = std::move(expression_operand);
 
     if (entry.label->is_global) {
         // For a global EQU, we must create an external definition. We do this for now by
@@ -114,12 +114,12 @@ void Op_Psect(const Operation& operation, AssemblyState& state) {
         operation.Fail(OperationException::Code::UnexpectedPSect,
             "may not appear with vsect");
 
-    if (state.psect.tylan)
+    if (state.found_psect)
         operation.Fail(OperationException::Code::UnexpectedPSect,
             "psect already initialized. only 1 psect allowed per file");
 
+    state.found_psect = true;
     state.in_psect = true;
-    auto& p_sect = state.psect;
 
     auto operands = operation.ParseOperands();
     if (operands.Count() > 7) {
@@ -127,45 +127,46 @@ void Op_Psect(const Operation& operation, AssemblyState& state) {
         operation.Fail(OperationException::Code::TooManyOperands, "must have <=7 operands");
     }
 
-    if (operands.Count() == 0) {
-        // Default name to "program" and rest of args to 0.
-        p_sect.name = "program";
-        p_sect.tylan = std::make_unique<NumericConstantExpression>(0);
-        p_sect.revision = std::make_unique<NumericConstantExpression>(0);
-        p_sect.edition = std::make_unique<NumericConstantExpression>(0);
-        p_sect.stack = std::make_unique<NumericConstantExpression>(0);
-        p_sect.entry_offset = std::make_unique<NumericConstantExpression>(0);
-        p_sect.trap_handler_offset = std::make_unique<NumericConstantExpression>(0);
-    } else {
-        // Params are fully specified.
+    bool default_mode = true;
+    if (operands.Count() != 0) {
+        // Params must be fully specified if any are specified.
+        default_mode = false;
 
+        auto& p_sect = state.psect;
+        
         // TODO: validation
         // > Any printable character may be used except a space or comma.
         // > However, the name must begin with a non-numeric character.
-        p_sect.name = operands.Get(0, "name").AsString();
+        p_sect.name = operands.Get(0, "name")->AsString();
 
-        p_sect.tylan = operands.Get(1, "typelang").AsExpression();
-        p_sect.revision = operands.Get(2, "attrev").AsExpression();
-        p_sect.edition = operands.Get(3, "edition").AsExpression();
-        p_sect.stack = operands.Get(4, "stacksize").AsExpression();
-        p_sect.entry_offset = operands.Get(5, "entrypt").AsExpression();
+        p_sect.tylan = operands.GetExpression(1, "typelang");
+        p_sect.revision = operands.GetExpression(2, "attrev");
+        p_sect.edition = operands.GetExpression(3, "edition");
+        p_sect.stack = operands.GetExpression(4, "stacksize");
+        p_sect.entry_offset = operands.GetExpression(5, "entrypt");
 
         if (operands.Count() == 7) {
-            p_sect.trap_handler_offset = operands.Get(6, "trapent").AsExpression();
+            p_sect.trap_handler_offset = operands.GetExpression(6, "trapent");
         }
     }
 
-    state.second_pass_queue.emplace_back([&p_sect = state.psect](AssemblyState& state) {
-        auto& result = state.result;
-
+    state.second_pass_queue.emplace_back([default_mode, &p_sect = state.psect](AssemblyState& state) {
         // TODO: remove state parameter. Note the RHS exprs are using p_sect from capture
-        result.name = p_sect.name;
-        result.tylan = ResolveExpression(*p_sect.tylan, state);
-        result.revision = ResolveExpression(*p_sect.revision, state);
-        result.edition = ResolveExpression(*p_sect.edition, state);
-        result.stack_size = ResolveExpression(*p_sect.stack, state);
-        result.entry_offset = ResolveExpression(*p_sect.entry_offset, state);
-        result.trap_handler_offset = ResolveExpression(*p_sect.trap_handler_offset, state);
+
+        auto& result = *state.result;
+
+        ExpressionResolver resolver(state);
+        auto get = [default_mode, &resolver](ExpressionOperand& operand) {
+            return default_mode ? 0 : operand.Resolve(resolver);
+        };
+
+        result.name = default_mode ? "program" : p_sect.name;
+        result.tylan = get(*p_sect.tylan);
+        result.revision = get(*p_sect.revision);
+        result.edition = get(*p_sect.edition);
+        result.stack_size = get(*p_sect.stack);
+        result.entry_offset = get(*p_sect.entry_offset);
+        result.trap_handler_offset = get(*p_sect.trap_handler_offset);
     });
 }
 
@@ -179,8 +180,8 @@ void Op_Vsect(const Operation& operation, AssemblyState& state) {
     if (operation.ParseOperands().Count() > 0) {
         auto operands = operation.ParseOperands();
         auto remote = operands.Get(0, "remote");
-        if (remote.AsString() != "remote")
-            remote.Fail("vsect operand if specified must be the string literal 'remote'");
+        if (remote->AsString() != "remote")
+            remote->Fail("vsect operand if specified must be the string literal 'remote'");
         state.in_remote_vsect = true;
     }
 }

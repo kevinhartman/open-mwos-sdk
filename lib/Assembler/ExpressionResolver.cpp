@@ -6,6 +6,7 @@
 #include "ExpressionParser.h"
 
 #include <functional>
+#include <string>
 
 namespace assembler {
 
@@ -13,16 +14,16 @@ namespace {
 
 using namespace expression;
 
-using ReferenceResolver = std::function<uint32_t(const Expression&)>;
+using ReferenceResolver = std::function<uint32_t(std::string)>;
 struct ResolverVisitor : ExpressionVisitor {
-    ResolverVisitor(ReferenceResolver reference_resolver_func) : reference_resolver_func(reference_resolver_func) {}
+    explicit ResolverVisitor(ReferenceResolver reference_resolver_func) : reference_resolver_func(reference_resolver_func) {}
 
     void Visit(const NumericConstantExpression& expr) override {
         result = expr.value;
     }
 
     void Visit(const ReferenceExpression& expr) override {
-        result = reference_resolver_func(expr);
+        result = reference_resolver_func(expr.Value());
     }
 
     void Visit(const HiExpression& expr) override {
@@ -103,15 +104,15 @@ std::unique_ptr<Expression> ParseExpression(const std::string& expr_str) {
     return parser.Parse();
 }
 
-uint32_t ResolveExpression(const Expression& expression, const AssemblyState& state) {
-    ReferenceResolver label_resolver = [&state](const Expression& e) {
-        throw "unimplemented: labels";
-        return 0;
-    };
+ExpressionResolver::ExpressionResolver(const AssemblyState& state)
+    : state(state) { }
 
-    ResolverVisitor resolver(label_resolver);
-    expression.Accept(resolver);
+uint32_t ExpressionResolver::Resolve(const Expression& expression) {
+    ResolverVisitor resolver_visitor ([](auto name)-> uint32_t {
+        throw "unimplemented";
+    });
 
-    return resolver.result;
+    expression.Accept(resolver_visitor);
+    return resolver_visitor.result;
 }
 }

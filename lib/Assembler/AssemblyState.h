@@ -2,6 +2,7 @@
 
 #include "AssemblerTarget.h"
 #include "AssemblerTypes.h"
+#include "Operation.h"
 #include <Expression.h>
 #include <ObjectFile.h>
 
@@ -31,9 +32,9 @@ struct DataDefinition {
     std::variant<std::string, std::unique_ptr<expression::Expression>> value;
 };
 
-struct EquDefinition {
-    std::unique_ptr<expression::Expression> value;
-};
+//struct EquDefinition {
+//    std::unique_ptr<expression::Expression> value;
+//};
 
 struct SetDefinition {
     std::unique_ptr<expression::Expression> value;
@@ -46,7 +47,7 @@ struct VSect {
 typedef size_t local_offset;
 struct PSect {
     std::string name;
-    std::unique_ptr<expression::Expression>
+    std::unique_ptr<ExpressionOperand>
         tylan,
         revision,
         edition,
@@ -66,7 +67,7 @@ struct PSect {
 
     std::map<std::string, object::SymbolInfo> symbols {};
 
-    std::map<std::string, EquDefinition> equs {};
+    std::map<std::string, std::unique_ptr<ExpressionOperand>> equs {};
 };
 
 struct AssemblyState {
@@ -95,25 +96,8 @@ struct AssemblyState {
         psect.symbols[label.name] = symbol_info;
     }
 
-    inline std::size_t& GetCounter(object::SymbolInfo::Type symbol_type) {
-        auto& counter = result.counter;
-        switch (symbol_type) {
-            case object::SymbolInfo::Type::UninitData:
-                return counter.uninitialized_data;
-            case object::SymbolInfo::Type::RemoteUninitData:
-                return counter.remote_uninitialized_data;
-            case object::SymbolInfo::Type::InitData:
-                return counter.initialized_data;
-            case object::SymbolInfo::Type::RemoteInitData:
-                return counter.remote_initialized_data;
-            case object::SymbolInfo::Type::Code:
-                return counter.code;
-            default:
-                assert(false);
-        }
-    }
-
     bool found_program_end = false;
+    bool found_psect = false;
 
     bool in_psect = false;
     bool in_vsect = false;
@@ -131,6 +115,6 @@ struct AssemblyState {
     std::vector<std::function<void(AssemblyState&)>> second_pass_queue {};
     std::vector<std::function<void()>> second_pass_queue2 {};
 
-    object::ObjectFile result {};
+    std::unique_ptr<object::ObjectFile> result = std::make_unique<object::ObjectFile>();
 };
 }

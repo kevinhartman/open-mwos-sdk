@@ -12,6 +12,8 @@
 #include <unordered_map>
 #include <ObjectFile.h>
 
+#include <variant>
+
 namespace assembler {
 
 // TODO:
@@ -71,7 +73,7 @@ void Op_DS(std::unique_ptr<Operation> operation, AssemblyState& state) {
         operation->Fail(OperationException::Code::NeedsVSectContext, context_err_msg);
 
     auto operands = operation->ParseOperands();
-    auto size_expr = operands.Get(0, "expr").AsExpression();
+    auto size_operand = operands.GetExpression(0, "expr");
 
     // If a label was provided inline, add it to pending labels.
     auto label_opt = operation->GetEntry().label;
@@ -79,13 +81,20 @@ void Op_DS(std::unique_ptr<Operation> operation, AssemblyState& state) {
         state.pending_labels.emplace_back(label_opt.value());
     }
 
+    ExpressionResolver resolver(state);
+
     // We need to resolve the size (count) expression *now*, since we must know by how much to increment data counter.
-    auto count = ResolveExpression(*size_expr, state);
+    auto count = size_operand->Resolve(resolver);
+    if (count < 1) {
+        // count cannot be < 1, since this would result in a symbol of size 0!
+        size_operand->Fail("must be > 0");
+    }
+
     auto increment = count * Size;
 
     auto& counter = state.in_remote_vsect
-        ? state.result.counter.remote_uninitialized_data
-        : state.result.counter.uninitialized_data;
+        ? state.result->counter.remote_uninitialized_data
+        : state.result->counter.uninitialized_data;
 
     // Automatically align to even boundary for word and long (according to documentation).
     if constexpr (Size > 1) {
@@ -109,10 +118,10 @@ void Op_DS(std::unique_ptr<Operation> operation, AssemblyState& state) {
             label.is_global,
             counter
         });
-
-        // Advance counter now that labels are mapped.
-        counter += increment;
     }
+
+    // Advance counter now that labels are mapped.
+    counter += increment;
 }
 
 /**
@@ -157,18 +166,13 @@ void Op_Align(std::unique_ptr<Operation> operation, AssemblyState& state) {
 
     auto operands = operation->ParseOperands();
     if (operands.Count() > 0) {
-        auto operand_alignment = operands.Get(0, "alignment");
-        auto expr = operand_alignment.AsExpression();
+        auto operand_alignment = operands.GetExpression(0, "alignment");
 
-        auto as_numeric = dynamic_cast<expression::NumericConstantExpression *>(expr.get());
-        if (as_numeric == nullptr) {
-            operand_alignment.Fail("must be a numeric constant expression");
-        }
-
-        alignment = as_numeric->Value();
+        ExpressionResolver resolver(state);
+        alignment = operand_alignment->Resolve(resolver);
 
         if (!support::IsPow2(alignment)) {
-            operand_alignment.Fail("must be power of 2");
+            operand_alignment->Fail("must be power of 2");
         }
     }
 
@@ -176,7 +180,7 @@ void Op_Align(std::unique_ptr<Operation> operation, AssemblyState& state) {
         counter = support::RoundToNextPow2Multiple(counter, alignment);
     };
 
-    auto& counter = state.result.counter;
+    auto& counter = state.result->counter;
     if (state.in_vsect) {
         // Align data counters
         align(state.in_remote_vsect ? counter.remote_initialized_data : counter.initialized_data);

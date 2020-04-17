@@ -8,12 +8,18 @@ add_executable(test-toolchain-libs
         test-toolchain-libs.cpp
         Assembler/ComparisonHelpers.cpp
         Assembler/PrinterHelpers.cpp
+        Assembler/TestAssembler.cpp
+        Assembler/TestAssemblerPseudoInstHandler.cpp
         Assembler/TestInputFileParser.cpp
         Assembler/TestExpressionLexer.cpp
         Assembler/TestExpressionParser.cpp
         Assembler/TestMipsAssemblerTarget.cpp
 
         ROF/TestRof15ObjectWriter.cpp
+)
+
+target_include_directories(test-toolchain-libs PRIVATE
+        ${OS9TOOLCHAIN_MAIN_SRC_DIR}/lib/Assembler
 )
 
 target_link_libraries(test-toolchain-libs PUBLIC

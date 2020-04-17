@@ -2,54 +2,90 @@
 
 #include "Assembler.h"
 #include "ExpressionResolver.h" // TODO: perhaps this should be replaced by Expression(Parser|Lexer).h
+#include <ExpressionLexer.h>
+#include <ExpressionParser.h>
 #include "StringUtil.h"
 
+#include <memory>
 #include <regex>
 
 namespace {
 
 using namespace assembler;
 
-class Operand {
-public:
-    Operand(std::string op, std::size_t index, std::string operand, std::string debug_alias)
-        : op(std::move(op)), index(index), operand(std::move(operand)), debug_alias(std::move(debug_alias)) {}
-
-    std::string AsString() const {
-        return operand;
-    }
-
-    std::unique_ptr<expression::Expression> AsExpression() const {
-        try {
-            return ParseExpression(operand);
-        } catch (std::runtime_error& e) {
-            throw OperandException(op, index, e);
-        }
-    }
-
-    void Fail(std::string requirement) const {
-        throw OperandException(op, index, "parameter " + debug_alias + " " + requirement);
-    }
-
-private:
+struct OperandInfo {
     const std::string op;
     const std::size_t index;
     const std::string operand;
     const std::string debug_alias;
 };
 
-class OperandList {
+class Operand {
 public:
-    OperandList(std::string op, std::vector<std::string> operands)
-        : op(std::move(op)), operands(std::move(operands)) { }
+    Operand(OperandInfo info) : info(std::move(info)) {}
 
-    Operand Get(std::size_t index, const std::string& debug_alias) const {
+    std::string AsString() const {
+        return info.operand;
+    }
+
+    //    ReferenceResolver label_resolver = [&state](const std::string& e)-> uint32_t {
+    //        // TODO: not implemented.
+    //        throw UnresolvedNameException(e);
+    //    };
+
+
+    void Fail(std::string requirement) const {
+        throw OperandException(info.op, info.index, "parameter " + info.debug_alias + " " + requirement);
+    }
+
+protected:
+    OperandInfo info;
+};
+
+
+class ExpressionOperand : public Operand {
+public:
+    explicit ExpressionOperand(const OperandInfo& info) : Operand(info) {
+        try {
+            auto lexer = ExpressionLexer(info.operand);
+            auto parser = ExpressionParser(lexer);
+            expr = parser.Parse();
+        } catch (std::runtime_error& e) {
+            throw OperandException(info.op, info.index, e);
+        }
+    }
+
+    u_int32_t Resolve(const ExpressionResolver& resolver) {
+        //resolver.Resolve(*expr, )
+        throw OperandException(info.op, info.index, "expression resolution unimplemented");
+    }
+
+private:
+    std::unique_ptr<expression::Expression> expr;
+};
+
+class OperandList {
+private:
+    template <typename T>
+    inline auto Get(std::size_t index, const std::string& debug_alias) const {
         if (index >= operands.size()) {
             throw new OperandException(op, index,
                 "Operation " + op + " missing positional operand " + std::to_string(index) + ".");
         }
 
-        return Operand(op, index, operands.at(index), debug_alias);
+        return std::make_unique<T>(OperandInfo { op, index, operands.at(index), debug_alias});
+    }
+
+public:
+    OperandList(std::string op, std::vector<std::string> operands)
+        : op(std::move(op)), operands(std::move(operands)) { }
+
+    std::unique_ptr<ExpressionOperand> GetExpression(std::size_t index, const std::string& debug_alias) {
+        return Get<ExpressionOperand>(index, debug_alias);
+    }
+
+    std::unique_ptr<Operand> Get(std::size_t index, const std::string& debug_alias) const {
+        return Get<Operand>(index, debug_alias);
     }
 
     std::size_t Count() const {
@@ -94,9 +130,9 @@ public:
         throw OperationException(entry.operation.value(), code, BuildMessage(requirement));
     }
 
-    OperandList ParseOperands(std::regex delimiter = std::regex(",")) const {
+    OperandList ParseOperands(const std::regex& delimiter = std::regex(",")) const {
         // TODO: catch split issues and return proper error
-        auto parsed = Split(entry.operands.value_or(""), std::move(delimiter));
+        auto parsed = Split(entry.operands.value_or(""), delimiter);
         return OperandList(entry.operation.value(), parsed);
     }
 
