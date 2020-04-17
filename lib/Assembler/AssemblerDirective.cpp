@@ -133,7 +133,7 @@ void Op_Psect(const Operation& operation, AssemblyState& state) {
         default_mode = false;
 
         auto& p_sect = state.psect;
-        
+
         // TODO: validation
         // > Any printable character may be used except a space or comma.
         // > However, the name must begin with a non-numeric character.
@@ -255,7 +255,7 @@ AssemblerDirectiveHandler::~AssemblerDirectiveHandler() = default;
 bool AssemblerDirectiveHandler::Handle(const Entry& entry, AssemblyState& state) {
     assert(entry.operation);
 
-    Operation operation(entry, state);
+    Operation operation(entry);
 
     auto handler_kv = directives.find(entry.operation.value());
     if (handler_kv != directives.end()) {

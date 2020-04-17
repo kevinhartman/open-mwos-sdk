@@ -22,7 +22,6 @@ namespace assembler {
 //     clear error message should inform the user that these expressions must be constexpr.
 
 namespace {
-
 /**
  * Ultra C Usage Guide:
  *
@@ -245,7 +244,7 @@ AssemblerPseudoInstHandler::~AssemblerPseudoInstHandler() = default;
 bool AssemblerPseudoInstHandler::Handle(const Entry& entry, AssemblyState& state) {
     assert(entry.operation);
 
-    auto operation = std::make_unique<Operation>(entry, state);
+    auto operation = std::make_unique<Operation>(entry);
 
     auto handler_kv = pseudo_instructions.find(entry.operation.value());
     if (handler_kv != pseudo_instructions.end()) {

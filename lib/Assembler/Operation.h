@@ -99,8 +99,8 @@ private:
 
 class Operation {
 public:
-    explicit Operation(const Entry& entry, const AssemblyState& state)
-        : entry(entry), state(state) {}
+    explicit Operation(const Entry& entry)
+        : entry(entry) {}
 
     void RequireLabel() const {
         if (!entry.label)
@@ -146,7 +146,6 @@ private:
     }
 
     const Entry& entry;
-    const AssemblyState& state;
 };
 
 }
