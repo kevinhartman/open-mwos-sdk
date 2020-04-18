@@ -11,7 +11,7 @@ class ExpressionResolver {
 public:
     explicit ExpressionResolver(const AssemblyState&);
 
-    uint32_t Resolve(const expression::Expression& expression);
+    uint32_t Resolve(const expression::Expression& expression) const;
 
 private:
     // TODO: we should probably be using shared pointer to avoid worrying about lifetimes.

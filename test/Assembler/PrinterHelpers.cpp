@@ -118,3 +118,10 @@ std::ostream &operator<<(std::ostream &os, const ExpressionMapping &expr) {
 }
 
 }
+
+namespace object {
+std::ostream &operator<<(std::ostream &os, const SymbolInfo &sym) {
+    os << "{ type: " << sym.type << " is_global: " << sym.is_global << " value: " << sym.value.value() << "{";
+    return os;
+}
+}

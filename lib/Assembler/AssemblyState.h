@@ -82,7 +82,7 @@ struct AssemblyState {
         return std::nullopt;
     }
 
-    inline std::optional<object::SymbolInfo> GetSymbol(std::string name) {
+    inline std::optional<object::SymbolInfo> GetSymbol(std::string name) const {
         auto symbol_itr = psect.symbols.find(name);
         if (symbol_itr != psect.symbols.end()) {
             return symbol_itr->second;

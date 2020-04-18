@@ -10,7 +10,7 @@ namespace {
 
 using namespace expression;
 
-using ReferenceResolver = std::function<uint32_t(std::string)>;
+using ReferenceResolver = std::function<uint32_t(const std::string&)>;
 struct ResolverVisitor : ExpressionVisitor {
     explicit ResolverVisitor(ReferenceResolver reference_resolver_func) : reference_resolver_func(reference_resolver_func) {}
 
@@ -96,9 +96,22 @@ struct ResolverVisitor : ExpressionVisitor {
 ExpressionResolver::ExpressionResolver(const AssemblyState& state)
     : state(state) { }
 
-uint32_t ExpressionResolver::Resolve(const Expression& expression) {
-    ResolverVisitor resolver_visitor ([](auto name)-> uint32_t {
-        throw "unimplemented";
+uint32_t ExpressionResolver::Resolve(const Expression& expression) const {
+    ResolverVisitor resolver_visitor ([this, &state = state](const std::string& name)-> uint32_t {
+        // TODO: we currently only support EQU. Need to implement references and Set.
+        auto& equs = state.psect.equs;
+
+        auto equ_expr_kv = equs.find(name);
+        if (equ_expr_kv != equs.end()) {
+            // We found an EQU definition expression. Try to resolve it.
+            auto& expr = equ_expr_kv->second;
+
+            // TODO: this will throw if it cannot be resolved. Should this be wrapped in an ExpressionResolver exception?
+            return expr->Resolve(*this);
+        }
+
+        // TODO: ExpressionResolver exception
+        throw std::runtime_error("name could not be resolved");
     });
 
     expression.Accept(resolver_visitor);

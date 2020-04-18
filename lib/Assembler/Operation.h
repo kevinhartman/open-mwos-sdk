@@ -14,10 +14,10 @@ namespace {
 using namespace assembler;
 
 struct OperandInfo {
-    const std::string op;
-    const std::size_t index;
-    const std::string operand;
-    const std::string debug_alias;
+    std::string op {};
+    std::size_t index {};
+    std::string operand {};
+    std::string debug_alias {};
 };
 
 class Operand {
@@ -56,8 +56,13 @@ public:
     }
 
     u_int32_t Resolve(const ExpressionResolver& resolver) {
-        //resolver.Resolve(*expr, )
-        throw OperandException(info.op, info.index, "expression resolution unimplemented");
+        try {
+            return resolver.Resolve(*expr);
+        } catch (std::runtime_error& ex) {
+            // TODO: improve error message
+            throw OperandException(info.op, info.index, "failed to resolve expression.");
+        }
+
     }
 
 private:

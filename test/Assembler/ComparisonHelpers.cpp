@@ -44,7 +44,13 @@ bool operator==(const expression::Expression &e1, const expression::Expression &
 }
 
 namespace assembler {
-    bool operator==(const ExpressionMapping &e1, const ExpressionMapping &e2) {
-        return std::tie(e1.offset, e1.bit_count, *e1.expression) == std::tie(e2.offset, e2.bit_count, *e2.expression);
-    }
+bool operator==(const ExpressionMapping &e1, const ExpressionMapping &e2) {
+    return std::tie(e1.offset, e1.bit_count, *e1.expression) == std::tie(e2.offset, e2.bit_count, *e2.expression);
+}
+}
+
+namespace object {
+bool operator==(const SymbolInfo &s1, const SymbolInfo &s2) {
+    return std::tie(s1.type, s1.is_global, s1.value.value()) == std::tie(s2.type, s2.is_global, s2.value.value());
+}
 }
