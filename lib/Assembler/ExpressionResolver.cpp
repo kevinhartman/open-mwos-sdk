@@ -1,12 +1,8 @@
 #include "ExpressionResolver.h"
 
 #include "AssemblyState.h"
-#include <Expression.h>
-#include "ExpressionLexer.h"
-#include "ExpressionParser.h"
 
 #include <functional>
-#include <string>
 
 namespace assembler {
 
@@ -95,13 +91,6 @@ struct ResolverVisitor : ExpressionVisitor {
     uint32_t result {};
     ReferenceResolver reference_resolver_func;
 };
-}
-
-std::unique_ptr<Expression> ParseExpression(const std::string& expr_str) {
-    auto lexer = ExpressionLexer(expr_str);
-    auto parser = ExpressionParser(lexer);
-
-    return parser.Parse();
 }
 
 ExpressionResolver::ExpressionResolver(const AssemblyState& state)
