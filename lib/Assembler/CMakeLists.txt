@@ -1,7 +1,7 @@
 add_library(Assembler
         Assembler.cpp
-        AssemblerDirective.cpp
-        AssemblerPseudoInst.cpp
+        AssemblerDirectiveHandler.cpp
+        AssemblerPseudoInstHandler.cpp
         ExpressionLexer.cpp
         ExpressionParser.cpp
         ExpressionResolver.cpp
