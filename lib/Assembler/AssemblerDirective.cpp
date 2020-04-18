@@ -65,17 +65,17 @@ using expression::NumericConstantExpression;
  * @param entry
  * @param state
  */
-void Op_Equ(const Operation& operation, AssemblyState& state) {
-    operation.RequireLabel();
+void Op_Equ(std::unique_ptr<Operation> operation, AssemblyState& state) {
+    operation->RequireLabel();
 
-    auto operands = operation.ParseOperands();
+    auto operands = operation->ParseOperands();
     auto expression_operand = operands.GetExpression(0, "expression");
 
-    auto& entry = operation.GetEntry();
+    auto& entry = operation->GetEntry();
     auto& name = entry.label->name;
     if (state.GetSymbol(name)) {
         // note that Set *does* allow redefinition if the existing symbol is also for a previous Set
-        operation.Fail(OperationException::Code::DuplicateSymbol,
+        operation->Fail(OperationException::Code::DuplicateSymbol,
             "Equ name must not already be defined.");
     }
 
@@ -105,26 +105,26 @@ void Op_Equ(const Operation& operation, AssemblyState& state) {
     }
 }
 
-void Op_Psect(const Operation& operation, AssemblyState& state) {
+void Op_Psect(std::unique_ptr<Operation> operation, AssemblyState& state) {
     if (state.in_psect)
-        operation.Fail(OperationException::Code::UnexpectedPSect,
+        operation->Fail(OperationException::Code::UnexpectedPSect,
             "must not be nested in another psect");
 
     if (state.in_vsect)
-        operation.Fail(OperationException::Code::UnexpectedPSect,
+        operation->Fail(OperationException::Code::UnexpectedPSect,
             "may not appear with vsect");
 
     if (state.found_psect)
-        operation.Fail(OperationException::Code::UnexpectedPSect,
+        operation->Fail(OperationException::Code::UnexpectedPSect,
             "psect already initialized. only 1 psect allowed per file");
 
     state.found_psect = true;
     state.in_psect = true;
 
-    auto operands = operation.ParseOperands();
+    auto operands = operation->ParseOperands();
     if (operands.Count() > 7) {
         // TODO: should this be an operand exception instead?
-        operation.Fail(OperationException::Code::TooManyOperands, "must have <=7 operands");
+        operation->Fail(OperationException::Code::TooManyOperands, "must have <=7 operands");
     }
 
     bool default_mode = true;
@@ -170,15 +170,15 @@ void Op_Psect(const Operation& operation, AssemblyState& state) {
     });
 }
 
-void Op_Vsect(const Operation& operation, AssemblyState& state) {
+void Op_Vsect(std::unique_ptr<Operation> operation, AssemblyState& state) {
     if (state.in_vsect)
-        operation.Fail(OperationException::Code::UnexpectedVSect,
+        operation->Fail(OperationException::Code::UnexpectedVSect,
             "must not be nested in another vsect");
 
     state.in_vsect = true;
 
-    if (operation.ParseOperands().Count() > 0) {
-        auto operands = operation.ParseOperands();
+    if (operation->ParseOperands().Count() > 0) {
+        auto operands = operation->ParseOperands();
         auto remote = operands.Get(0, "remote");
         if (remote->AsString() != "remote")
             remote->Fail("vsect operand if specified must be the string literal 'remote'");
@@ -186,9 +186,9 @@ void Op_Vsect(const Operation& operation, AssemblyState& state) {
     }
 }
 
-void Op_Ends(const Operation& operation, AssemblyState& state) {
+void Op_Ends(std::unique_ptr<Operation> operation, AssemblyState& state) {
     if (!state.in_psect && !state.in_vsect) {
-        operation.Fail(OperationException::Code::UnexpectedEnds,
+        operation->Fail(OperationException::Code::UnexpectedEnds,
             "must be in a section");
     }
 
@@ -204,22 +204,22 @@ void Op_Ends(const Operation& operation, AssemblyState& state) {
     // TODO: should we enqueue a task to emit vsect or psect processing?
 }
 
-void Op_End(const Operation& operation, AssemblyState& state) {
-    operation.RequireNoLabel();
+void Op_End(std::unique_ptr<Operation> operation, AssemblyState& state) {
+    operation->RequireNoLabel();
 
     // End of program signaled. Stop processing input lines.
     state.found_program_end = true;
 }
 
-void Op_Unimplemented(const Operation& operation, AssemblyState& state) {
-    throw std::runtime_error("Directive is unimplemented: " + operation.GetEntry().operation.value_or(""));
+void Op_Unimplemented(std::unique_ptr<Operation> operation, AssemblyState& state) {
+    throw std::runtime_error("Directive is unimplemented: " + operation->GetEntry().operation.value_or(""));
 }
 
 }
 
 namespace assembler {
 
-typedef void (*DirectiveHandler)(const Operation&, AssemblyState&);
+typedef void (*DirectiveHandler)(std::unique_ptr<Operation> operation, AssemblyState&);
 std::unordered_map<std::string, DirectiveHandler> directives = {
     { "equ", Op_Equ },
     { "psect", Op_Psect },
@@ -255,11 +255,11 @@ AssemblerDirectiveHandler::~AssemblerDirectiveHandler() = default;
 bool AssemblerDirectiveHandler::Handle(const Entry& entry, AssemblyState& state) {
     assert(entry.operation);
 
-    Operation operation(entry);
+    auto operation = std::make_unique<Operation>(entry);
 
     auto handler_kv = directives.find(entry.operation.value());
     if (handler_kv != directives.end()) {
-        handler_kv->second(operation, state);
+        handler_kv->second(std::move(operation), state);
         return true;
     }
 
