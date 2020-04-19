@@ -95,16 +95,27 @@ void Op_Equ(std::unique_ptr<Operation> operation, AssemblyState& state) {
         //    we can resolve them to constants in the second pass. Perhaps we should add symbols for local equs too,
         //    since the assembler's -s option shows local equs too. But, we would need to track them differently,
         //    since they can include external references, and thus cannot be encoded as a constant integer.
-        state.second_pass_queue.emplace_back([&label = entry.label](AssemblyState &state) {
-            object::SymbolInfo symbol_info;
-            symbol_info.is_global = label->is_global;
-            symbol_info.type = object::SymbolInfo::Type::Equ;
+        auto second_pass = std::make_unique<SecondPassAction>(
+            [&label = entry.label](AssemblyState& state) {
+                object::SymbolInfo symbol_info;
+                symbol_info.is_global = label->is_global;
+                symbol_info.type = object::SymbolInfo::Type::Equ;
 
-            state.UpdateSymbol(label.value(), symbol_info);
-        });
+                state.UpdateSymbol(label.value(), symbol_info);
+            }
+        );
+
+        state.DeferToSecondPass(std::move(second_pass));
     }
 }
 
+/**
+ * TODO:
+ *   - We currently save psect operands into state.psect.<operand name>, but that
+ *     is no longer required since SecondPassAction automatically can hold them instead.
+ * @param operation
+ * @param state
+ */
 void Op_Psect(std::unique_ptr<Operation> operation, AssemblyState& state) {
     if (state.in_psect)
         operation->Fail(OperationException::Code::UnexpectedPSect,
@@ -150,24 +161,28 @@ void Op_Psect(std::unique_ptr<Operation> operation, AssemblyState& state) {
         }
     }
 
-    state.second_pass_queue.emplace_back([default_mode, &p_sect = state.psect](AssemblyState& state) {
-        // TODO: remove state parameter. Note the RHS exprs are using p_sect from capture
+    auto second_pass = std::make_unique<SecondPassAction>(
+        [default_mode, &p_sect = state.psect](AssemblyState& state) {
+            // TODO: remove state parameter. Note the RHS exprs are using p_sect from capture
 
-        auto& result = *state.result;
+            auto& result = *state.result;
 
-        ExpressionResolver resolver(state);
-        auto get = [default_mode, &resolver](ExpressionOperand& operand) {
-            return default_mode ? 0 : operand.Resolve(resolver);
-        };
+            ExpressionResolver resolver(state);
+            auto get = [default_mode, &resolver](ExpressionOperand& operand) {
+                return default_mode ? 0 : operand.Resolve(resolver);
+            };
 
-        result.name = default_mode ? "program" : p_sect.name;
-        result.tylan = get(*p_sect.tylan);
-        result.revision = get(*p_sect.revision);
-        result.edition = get(*p_sect.edition);
-        result.stack_size = get(*p_sect.stack);
-        result.entry_offset = get(*p_sect.entry_offset);
-        result.trap_handler_offset = get(*p_sect.trap_handler_offset);
-    });
+            result.name = default_mode ? "program" : p_sect.name;
+            result.tylan = get(*p_sect.tylan);
+            result.revision = get(*p_sect.revision);
+            result.edition = get(*p_sect.edition);
+            result.stack_size = get(*p_sect.stack);
+            result.entry_offset = get(*p_sect.entry_offset);
+            result.trap_handler_offset = get(*p_sect.trap_handler_offset);
+        }
+    );
+
+    state.DeferToSecondPass(std::move(second_pass));
 }
 
 void Op_Vsect(std::unique_ptr<Operation> operation, AssemblyState& state) {

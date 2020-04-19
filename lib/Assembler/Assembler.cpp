@@ -119,8 +119,8 @@ std::unique_ptr<object::ObjectFile> Assembler::Process(const std::vector<Entry> 
     }
 
     // Invoke second pass.
-    for (auto& action : state.second_pass_queue) {
-        action(state);
+    for (auto& action : state.second_pass_queue2) {
+        (*action)(state);
     }
 
     return std::move(state.result);

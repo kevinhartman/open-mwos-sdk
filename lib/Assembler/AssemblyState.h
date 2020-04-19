@@ -13,6 +13,34 @@
 
 namespace assembler {
 
+class AssemblyState;
+class SecondPassAction {
+private:
+    std::vector<std::unique_ptr<Operand>> operands {};
+    std::vector<std::unique_ptr<ExpressionOperand>> expr_operands {};
+    std::function<void(AssemblyState&)> _action;
+
+    Operand& Accept(std::unique_ptr<Operand> operand) {
+        return *operands.emplace_back(std::move(operand));
+    }
+
+    ExpressionOperand& Accept(std::unique_ptr<ExpressionOperand> operand) {
+        return *expr_operands.emplace_back(std::move(operand));
+    }
+
+public:
+    template <typename F, typename ...T>
+    explicit SecondPassAction(F action, std::unique_ptr<T> ...operands) {
+        _action = [this, action, &operands...](AssemblyState& state) {
+            action(state, this->Accept(std::move(operands))...);
+        };
+    }
+
+    void operator()(AssemblyState& state) {
+        _action(state);
+    }
+};
+
 /**
  * Represents a constant data declaration (i.e. dc.*).
  *
@@ -29,7 +57,6 @@ namespace assembler {
 struct DataDefinition {
     size_t size;
     bool is_signed = false;
-    std::variant<std::string, std::unique_ptr<expression::Expression>> value;
 };
 
 //struct EquDefinition {
@@ -62,6 +89,7 @@ struct PSect {
 
     std::map<local_offset, DataDefinition> remote_initialized_data {};
     std::map<local_offset, DataDefinition> remote_uninitialized_data {};
+    std::map<local_offset, DataDefinition> code_data {};
 
     std::map<local_offset, Instruction> code {};
 
@@ -72,14 +100,24 @@ struct PSect {
 
 struct AssemblyState {
 
+    inline auto& GetInitDataCounter() {
+        return !in_vsect
+            ? result->counter.code
+            : in_remote_vsect
+                ? result->counter.remote_initialized_data
+                : result->counter.initialized_data;
+    }
 
-    inline std::optional<Label> GetLabel(std::string name) {
-        auto symbol_itr = symbol_name_to_label.find(name);
-        if (symbol_itr != symbol_name_to_label.end()) {
-            return symbol_itr->second;
-        }
+    inline auto& GetInitDataMap() {
+        return !in_vsect
+            ? psect.code_data
+            : in_remote_vsect
+                ? psect.remote_initialized_data
+                : psect.initialized_data;
+    }
 
-        return std::nullopt;
+    void DeferToSecondPass(std::unique_ptr<SecondPassAction> action) {
+        second_pass_queue2.emplace_back(std::move(action));
     }
 
     inline std::optional<object::SymbolInfo> GetSymbol(std::string name) const {
@@ -112,8 +150,7 @@ struct AssemblyState {
     //   - Counter values (probably among other things) should only be allowed to be manipulated in the first pass.
     //     What if instead of making the state accessible to both passes, we only allow the second pass write access
     //     to the result object file, and only allow the first pass write access to the state?
-    std::vector<std::function<void(AssemblyState&)>> second_pass_queue {};
-    std::vector<std::function<void()>> second_pass_queue2 {};
+    std::vector<std::unique_ptr<SecondPassAction>> second_pass_queue2 {};
 
     std::unique_ptr<object::ObjectFile> result = std::make_unique<object::ObjectFile>();
 };
