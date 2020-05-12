@@ -27,7 +27,7 @@ SCENARIO("ROF header is written correctly", "[serializer][rof]") {
         object_file.name = "dummy";
 
         WHEN("the ROF file is produced") {
-            Rof15ObjectWriter writer(support::Endian::big);
+            Rof15ObjectWriter writer {};
 
             std::stringstream buf;
             writer.Write(object_file, buf);
