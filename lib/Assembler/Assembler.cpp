@@ -8,6 +8,7 @@
 #include "Numeric.h"
 #include "ObjectFile.h"
 
+#include <chrono>
 #include <limits>
 #include <vector>
 

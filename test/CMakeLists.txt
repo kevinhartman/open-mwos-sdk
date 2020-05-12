@@ -1,6 +1,9 @@
 find_package(Catch2 REQUIRED)
 find_package(PkgConfig REQUIRED)
 
+include(CTest)
+include(Catch)
+
 # Used for Assembler decode tests.
 pkg_check_modules(CAPSTONE REQUIRED IMPORTED_TARGET capstone)
 
@@ -28,3 +31,5 @@ target_link_libraries(test-toolchain-libs PUBLIC
         Catch2::Catch2
         PkgConfig::CAPSTONE
 )
+
+catch_discover_tests(test-toolchain-libs)

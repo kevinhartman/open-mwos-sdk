@@ -11,12 +11,13 @@ on:
 jobs:
   build:
     name: Build and test
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v2
-      - run: sudo apt-get install libcapstone-dev
+      - run: brew install capstone pkgconfig
       - run: vcpkg install catch2
       - run: |
           mkdir build && cd build
           cmake -DCMAKE_TOOLCHAIN_FILE=/usr/local/share/vcpkg/scripts/buildsystems/vcpkg.cmake ..
+          make all
           make test
