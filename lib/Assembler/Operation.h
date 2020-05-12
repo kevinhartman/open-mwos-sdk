@@ -8,6 +8,7 @@
 
 #include <memory>
 #include <regex>
+#include <sstream>
 
 namespace {
 
@@ -55,7 +56,7 @@ public:
         }
     }
 
-    u_int32_t Resolve(const ExpressionResolver& resolver) {
+    u_int32_t Resolve(const ExpressionResolver& resolver) const {
         try {
             return resolver.Resolve(*expr);
         } catch (std::runtime_error& ex) {
@@ -104,6 +105,55 @@ private:
 
 class Operation {
 public:
+    static constexpr auto SplitOnCommaRespectingStrings = [](const std::string& operands) {
+        auto split_by_comma = Split(operands, std::regex(","));
+
+        std::vector<std::string> result {};
+        result.reserve(split_by_comma.size());
+
+        std::stringstream ss {};
+        for (const std::string& segment : split_by_comma) {
+            std::size_t pos {};
+            if (ss.tellp() == ss.beg) {
+                // we're not lexing a string yet.
+                if (segment.front() == '"') {
+                    // we're entering a string
+                    pos = segment.find('"', 1);
+                } else {
+                    // this must be an expression or empty string, so we're done.
+                    result.emplace_back(segment);
+                    continue;
+                }
+            } else {
+                // we're already in a string. Find the terminating "
+                pos = segment.find('"');
+            }
+
+            if (pos == std::string::npos) {
+                // not found, so the comma was supposed to be in the string
+                ss << segment << ",";
+            } else if (pos == segment.length() - 1) {
+                // end of string was found
+                ss << segment;
+                const auto& quoted = ss.str();
+                result.emplace_back(quoted);
+
+                // reset ss
+                std::stringstream new_ss {};
+                ss.swap(new_ss);
+            } else {
+                // matching " appeared before the end of the string
+                throw std::runtime_error("invalid character string");
+            }
+        }
+
+        return result;
+    };
+
+    static constexpr auto SplitOnComma = [](auto&& operands) {
+        return Split(operands, std::regex(","));
+    };
+
     explicit Operation(const Entry& entry)
         : entry(entry) {}
 
@@ -135,10 +185,14 @@ public:
         throw OperationException(entry.operation.value(), code, BuildMessage(requirement));
     }
 
-    OperandList ParseOperands(const std::regex& delimiter = std::regex(",")) const {
+    OperandList ParseOperands(const std::function<std::vector<std::string>(std::string)>& split_func) const {
         // TODO: catch split issues and return proper error
-        auto parsed = Split(entry.operands.value_or(""), delimiter);
+        auto parsed = split_func(entry.operands.value_or(""));
         return OperandList(entry.operation.value(), parsed);
+    }
+
+    OperandList ParseOperands() const {
+        return ParseOperands(SplitOnComma);
     }
 
     const Entry& GetEntry() const {
