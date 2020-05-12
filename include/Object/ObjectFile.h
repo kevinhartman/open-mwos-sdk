@@ -50,13 +50,14 @@ struct VSect {
 struct SymbolInfo {
     enum Type {
         Code,
+        Equ,
+        Set,
         InitData,
         UninitData,
         RemoteInitData,
         RemoteUninitData
     } type;
 
-    bool is_signed; // TODO: symbols don't have sign in ROF. Why did I put this here?
     std::optional<uint32_t> value;
 };
 

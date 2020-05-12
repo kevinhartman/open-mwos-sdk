@@ -12,6 +12,8 @@ add_executable(test-toolchain-libs
         Assembler/TestExpressionLexer.cpp
         Assembler/TestExpressionParser.cpp
         Assembler/TestMipsAssemblerTarget.cpp
+
+        ROF/TestRof15ObjectWriter.cpp
 )
 
 target_link_libraries(test-toolchain-libs PUBLIC

@@ -53,6 +53,73 @@ void ReadPSectParams(const Entry& entry, AssemblyState& state) {
 }
 }
 
+/**
+ * Notes on the behavior of EQU.
+ *
+ * Ultra C Usage Guide:
+ * > equ assigns a value to a symbolic name (the label).
+ * >
+ * > <label> may be any legal assembler label name.
+ * > <expression> is the value to assign to the label. It may be an expression,
+ * > a name, or a constant.
+ *
+ * > You can use the equ directive in any program section. The equ statement label
+ * > name cannot have been defined previously. The operand cannot include a name that
+ * > has not yet been defined (as yet undefined names whose definitions also use
+ * > undefined names).
+ *
+ * > equ is normally used to define program symbolic constants, especially those used
+ * > with instructions. Although the set directive is similar to equ, there are differences:
+ * >  - Symbols defined by equ can be defined only once in the program.
+ *
+ * Additional Notes:
+ *
+ * Expression trees can include EQU values, which are considered EQU reference types (they
+ * are not simply numeric constants).
+ *
+ * The label CAN be global, which will result in an entry in the External Definition
+ * section of the ROF.
+ *
+ * Rules for global EQUs:
+ * - They can NOT reference external names.
+ * - To that end, they must be constant expressions. This is because to be included in
+ *   the External Definition section of the ROF, they must be a 32-bit constant value.
+ *
+ * Rules for local EQUs:
+ * - They CAN reference external names.
+ * - They can only reference other local names that do NOT reference external names.
+ *     TODO: why?
+ *
+ * TODO:
+ *   - Try using an EQU that references a non-equ external reference. What happens?
+ *     What is the value stored in the expression tree?
+ *   - Does order matter? Equs *can* have expressions which use names defined later,
+ *     lexically. But can order change anything?
+ *
+ * @param entry
+ * @param state
+ */
+void Op_Equ(const Entry& entry, AssemblyState& state) {
+    if (!entry.label)
+        throw "Operation " + entry.operation.value() + " must have a label.";
+
+    auto& name = entry.label->name;
+
+    if (state.GetSymbol(name)) {
+        // note that Set *does* allow redefinition if the existing symbol is also for a previous Set
+        throw "Redefinition of label not allowed.";
+    }
+
+    object::SymbolInfo symbol_info;
+    symbol_info;
+
+    // TODO: finish implementaiton.
+
+    state.UpdateSymbol(entry.label.value(), symbol_info);
+
+
+}
+
 bool HandleDirective(const Entry& entry, AssemblyState& state) {
     auto require_no_label = [&entry]() {
         if (entry.label)
@@ -107,7 +174,10 @@ bool HandleDirective(const Entry& entry, AssemblyState& state) {
         }
     }
     else if (op("equ")) {
-        throw "unimplemented";
+        /*
+         * Equs and set declarations can actually be used externally (from other ROFs).
+         */
+        Op_Equ(entry, state);
     }
     else if (op("set")) {
         throw "unimplemented";

@@ -54,16 +54,23 @@ struct PSect {
     std::map<local_offset, DataDefinition> remote_uninitialized_data {};
 
     std::map<local_offset, Instruction> code {};
+
+    std::map<std::string, object::SymbolInfo> symbols {};
 };
 
 struct AssemblyState {
     inline std::optional<object::SymbolInfo> GetSymbol(std::string name) {
-        auto handler_kv = result.local_symbols.find(name);
-        if (handler_kv != result.local_symbols.end()) {
-            return handler_kv->second;
+        auto symbol_itr = result.local_symbols.find(name);
+        if (symbol_itr != result.local_symbols.end()) {
+            return symbol_itr->second;
         }
 
-        handler_kv = result.global_symbols.find(name);
+        symbol_itr = result.global_symbols.find(name);
+        if (symbol_itr != result.global_symbols.end()) {
+            return symbol_itr->second;
+        }
+
+        return std::nullopt;
     }
 
     inline void UpdateSymbol(const Label& label, const object::SymbolInfo& symbol_info) {

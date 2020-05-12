@@ -70,6 +70,8 @@ std::vector<ExternDefinition> GetExternalDefinitions(const object::ObjectFile& o
         auto& name = elem.first;
         auto& symbol = elem.second;
 
+        //symbol.type
+
         rof::ExternDefinition definition {};
         definition.Name() = name;
         // TODO: finish implementing
