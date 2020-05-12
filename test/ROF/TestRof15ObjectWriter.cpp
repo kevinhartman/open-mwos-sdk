@@ -6,6 +6,7 @@
 #include <Rof15ObjectWriter.h>
 #include <Serialization.h>
 
+#include <chrono>
 #include <sstream>
 
 namespace rof {
@@ -20,11 +21,22 @@ SCENARIO("ROF header is written correctly", "[serializer][rof]") {
         object_file.revision = 1;
         object_file.assembler_version = 23;
         object_file.assembly_time_epoch = 0;
+        object_file.cpu_target = object::CpuTarget::os9k_mips;
         object_file.edition = 2;
         object_file.stack_size = 4096;
         object_file.entry_offset = 0x60;
         object_file.trap_handler_offset = 0x200;
         object_file.name = "dummy";
+
+        tm time_info;
+        time_info.tm_year = 6;
+        time_info.tm_mon = 5;
+        time_info.tm_mday = 4;
+        time_info.tm_hour = 3;
+        time_info.tm_min = 2;
+        time_info.tm_sec = 1;
+
+        object_file.assembly_time = mktime(&time_info);
 
         WHEN("the ROF file is produced") {
             Rof15ObjectWriter writer {};
@@ -46,7 +58,6 @@ SCENARIO("ROF header is written correctly", "[serializer][rof]") {
                 REQUIRE(header->Revision() == object_file.revision);
                 REQUIRE(header->AsmValid() == 0);
                 REQUIRE(header->AsmVersion() == object_file.assembler_version);
-                REQUIRE(header->AsmDate() == std::array<uint8_t, 6>{0, 0, 0, 0, 0, 0});
                 REQUIRE(header->Edition() == object_file.edition);
                 REQUIRE(header->StaticDataSize() == 0);
                 REQUIRE(header->InitializedDataSize() == 0);
@@ -57,9 +68,17 @@ SCENARIO("ROF header is written correctly", "[serializer][rof]") {
                 REQUIRE(header->RemoteStaticDataSizeRequired() == 0);
                 REQUIRE(header->RemoteInitializedDataSizeRequired() == 0);
                 REQUIRE(header->DebugInfoSize() == 0);
-                REQUIRE(header->TargetCPU() == 0);
+                REQUIRE(header->TargetCPU() == 0x800 /* MIPS */);
                 REQUIRE(header->CodeInfo() == 0);
                 REQUIRE(header->Name() == object_file.name);
+                REQUIRE(header->AsmDate() == std::array<uint8_t, 6>{
+                    static_cast<uint8_t>(time_info.tm_year),
+                    static_cast<uint8_t>(time_info.tm_mon),
+                    static_cast<uint8_t>(time_info.tm_mday),
+                    static_cast<uint8_t>(time_info.tm_hour),
+                    static_cast<uint8_t>(time_info.tm_min),
+                    static_cast<uint8_t>(time_info.tm_sec)
+                });
             }
         }
     }
