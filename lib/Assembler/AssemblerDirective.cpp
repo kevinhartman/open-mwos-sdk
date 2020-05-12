@@ -1,11 +1,13 @@
 #include <Expression.h>
 
+#include <Assembler.h>
 #include "AssemblerTypes.h"
 #include "AssemblyState.h"
 #include "ExpressionResolver.h"
 #include "StringUtil.h"
 
 #include <regex>
+#include <unordered_map>
 
 namespace assembler {
 
@@ -13,44 +15,91 @@ using expression::NumericConstantExpression;
 
 namespace {
 
-void ReadPSectParams(const Entry& entry, AssemblyState& state) {
-    auto params = Split(entry.operands.value_or(""), std::regex(","));
-    PSect& p_sect = state.psect;
-    
-    if (params.size() > 7) {
-        throw "too many parameters to psect directive";
+class Operands {
+public:
+    Operands(OperationId op_id, std::vector<std::string> operands) : op_id(op_id), operands(std::move(operands)) {}
+
+    std::size_t Count() const {
+        return operands.size();
     }
 
-    if (params.size() == 0) {
-        // Default name to "program" and rest of args to 0.
-        p_sect.name = "program";
-        p_sect.tylan = std::make_unique<NumericConstantExpression>(0);
-        p_sect.revision = std::make_unique<NumericConstantExpression>(0);
-        p_sect.edition = std::make_unique<NumericConstantExpression>(0);
-        p_sect.stack = std::make_unique<NumericConstantExpression>(0);
-        p_sect.entry_offset = std::make_unique<NumericConstantExpression>(0);
-        p_sect.trap_handler_offset = std::make_unique<NumericConstantExpression>(0);
-    } else if (params.size() >= 6) {
-        // Params are fully specified.
+    std::string GetString(std::size_t index) {
+        RequireOperand(index);
+        return operands.at(index);
+    }
 
-        // TODO: validation
-        // > Any printable character may be used except a space or comma.
-        // > However, the name must begin with a non-numeric character.
-        p_sect.name = params[0];
+    std::unique_ptr<expression::Expression> GetExpression(std::size_t index) {
+        RequireOperand(index);
 
-        p_sect.tylan = ParseExpression(params[1]);
-        p_sect.revision = ParseExpression(params[2]);
-        p_sect.edition = ParseExpression(params[3]);
-        p_sect.stack = ParseExpression(params[4]);
-        p_sect.entry_offset = ParseExpression(params[5]);
-
-        if (params.size() == 7) {
-            p_sect.trap_handler_offset = ParseExpression(params[6]);
+        try {
+            return ParseExpression(operands.at(index));
+        } catch (std::runtime_error& e) {
+            throw OperandException(op_id, index, e);
         }
-    } else {
-        throw "not enough parameters to psect directive. Specify all (with optional trap), or none.";
     }
-}
+
+private:
+    void RequireOperand(std::size_t index) {
+        if (index >= operands.size()) {
+            throw OperandException(op_id, index, "Operation missing expected operand.");
+        }
+    }
+
+    OperationId op_id;
+    const std::vector<std::string> operands;
+};
+
+class Operation {
+public:
+    explicit Operation(const Entry& entry, const AssemblyState& state)
+        : entry(entry), state(state) {}
+
+    void RequireLabel() const {
+        if (!entry.label)
+            throw OperationException(OperationId::Equ, OperationException::Code::MissingLabel,
+                BuildMessage("must have a label"));
+    }
+
+    void RequireNoOperands() const {
+        if (entry.operands)
+            throw OperationException(OperationId::Equ, OperationException::Code::UnexpectedOperands,
+                BuildMessage("cannot have operands"));
+    }
+
+    void RequireNoLabel() const {
+        if (entry.label)
+            throw OperationException(OperationId::Equ, OperationException::Code::UnexpectedLabel,
+                BuildMessage("cannot have a label"));
+    }
+
+    void RequireNoComment() const {
+        if (entry.comment)
+            throw OperationException(OperationId::Equ, OperationException::Code::UnexpectedComment,
+                BuildMessage("cannot have a comment."));
+    }
+
+    void Fail(OperationException::Code code, std::string requirement) const {
+        throw OperationException(OperationId::Equ, code, BuildMessage(requirement));
+    }
+
+    Operands ParseOperands(std::regex delimiter = std::regex(",")) const {
+        auto parsed = Split(entry.operands.value(), delimiter);
+        return Operands(OperationId::Equ, std::move(parsed));
+    }
+
+    const Entry& GetEntry() const {
+        return entry;
+    }
+
+private:
+    std::string BuildMessage(std::string requirement) const {
+        return "Operation " + entry.operation.value_or("[null]") + requirement + ".";
+    }
+
+    const Entry& entry;
+    const AssemblyState& state;
+};
+
 }
 
 /**
@@ -99,20 +148,22 @@ void ReadPSectParams(const Entry& entry, AssemblyState& state) {
  * @param entry
  * @param state
  */
-void Op_Equ(const Entry& entry, AssemblyState& state) {
-    if (!entry.label)
-        throw "Operation " + entry.operation.value() + " must have a label.";
+void Op_Equ(const Operation& operation, AssemblyState& state) {
+    operation.RequireLabel();
 
-    if (!entry.operands)
-        throw "arg: equ missing expression";
+    Operands operands = operation.ParseOperands();
+    auto expression = operands.GetExpression(0);
 
+    auto& entry = operation.GetEntry();
     auto& name = entry.label->name;
     if (state.GetSymbol(name)) {
         // note that Set *does* allow redefinition if the existing symbol is also for a previous Set
-        throw "Redefinition of label not allowed.";
+        throw OperationException(OperationId::Equ, OperationException::Code::DuplicateSymbol,
+            "Equ name must not already be defined.");
     }
 
-    auto expression = ParseExpression(entry.operands.value());
+    // Create Equ definition.
+    state.psect.equs[name].value = std::move(expression);
 
     // Create symbol entry.
     object::SymbolInfo symbol_info;
@@ -120,12 +171,91 @@ void Op_Equ(const Entry& entry, AssemblyState& state) {
     symbol_info.type = object::SymbolInfo::Type::Equ;
 
     state.UpdateSymbol(entry.label.value(), symbol_info);
-
-    // Create Equ definition.
-    state.psect.equs[name].value = std::move(expression);
 }
 
+void Op_Psect(const Operation& operation, AssemblyState& state) {
+    if (state.in_psect)
+        operation.Fail(OperationException::Code::UnexpectedPSect, "must not be nested in another psect");
+
+    if (state.in_vsect)
+        operation.Fail(OperationException::Code::UnexpectedPSect, "may not appear with vsect");
+
+    if (state.psect.tylan)
+        operation.Fail(OperationException::Code::UnexpectedPSect,
+            "psect already initialized. only 1 psect allowed per file");
+
+    state.in_psect = true;
+    PSect& p_sect = state.psect;
+
+    auto operands = operation.ParseOperands();
+    if (operands.Count() > 7) {
+        operation.Fail(OperationException::Code::TooManyOperands, "must have <=7 operands");
+    }
+
+    if (operands.Count() == 0) {
+        // Default name to "program" and rest of args to 0.
+        p_sect.name = "program";
+        p_sect.tylan = std::make_unique<NumericConstantExpression>(0);
+        p_sect.revision = std::make_unique<NumericConstantExpression>(0);
+        p_sect.edition = std::make_unique<NumericConstantExpression>(0);
+        p_sect.stack = std::make_unique<NumericConstantExpression>(0);
+        p_sect.entry_offset = std::make_unique<NumericConstantExpression>(0);
+        p_sect.trap_handler_offset = std::make_unique<NumericConstantExpression>(0);
+    } else {
+        // Params are fully specified.
+
+        // TODO: validation
+        // > Any printable character may be used except a space or comma.
+        // > However, the name must begin with a non-numeric character.
+        p_sect.name = operands.GetString(0);
+
+        p_sect.tylan = operands.GetExpression(1);
+        p_sect.revision = operands.GetExpression(2);
+        p_sect.edition = operands.GetExpression(3);
+        p_sect.stack = operands.GetExpression(4);
+        p_sect.entry_offset = operands.GetExpression(5);
+
+        if (operands.Count() == 7) {
+            p_sect.trap_handler_offset = operands.GetExpression(6);
+        }
+    }
+}
+
+void Op_Vsect(const Operation& operation, AssemblyState& state) {
+    if (state.in_vsect)
+        operation.Fail(OperationException::Code::UnexpectedVSect,
+            "must not be nested in another vsect");
+
+    state.in_vsect = true;
+
+    if (operation.GetEntry().operands) {
+        auto operands = operation.ParseOperands();
+        if (operands.GetString(0) != "remote") throw OperandException()"invalid operand to vsect directive";
+        state.in_remote_vsect = true;
+    }
+}
+
+typedef void (*DirectiveHandler)(const Operation&, AssemblyState&);
+std::unordered_map<std::string, DirectiveHandler> directives = {
+    { "equ", Op_Equ },
+    { "psect", Op_Psect }
+};
+
 bool HandleDirective(const Entry& entry, AssemblyState& state) {
+    assert(entry.operation);
+
+    Operation operation(entry, state);
+
+    auto handler_kv = directives.find(entry.operation.value());
+    if (handler_kv != directives.end()) {
+        handler_kv->second(operation, entry, state);
+        return true;
+    }
+
+    return false;
+}
+
+bool HandleDirective1(const Entry& entry, AssemblyState& state) {
     auto require_no_label = [&entry]() {
         if (entry.label)
             throw "Operation " + entry.operation.value_or("[null]") + " cannot have a label.";

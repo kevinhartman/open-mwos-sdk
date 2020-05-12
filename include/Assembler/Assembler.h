@@ -1,6 +1,8 @@
 #pragma once
 
 #include <functional>
+#include <optional>
+#include <string>
 #include <vector>
 
 namespace object {
@@ -28,6 +30,41 @@ protected:
 private:
     uint16_t assembler_version;
     std::unique_ptr<AssemblerTarget> target;
+};
+
+enum class OperationId {
+    Equ
+};
+
+struct OperationException : std::runtime_error {
+    enum class Code {
+        MissingLabel,
+        UnexpectedOperands,
+        TooManyOperands,
+        UnexpectedLabel,
+        UnexpectedComment,
+        DuplicateSymbol,
+        UnexpectedPSect,
+        UnexpectedVSect,
+    };
+
+    OperationException(OperationId op, Code code, const std::string& cause)
+        : runtime_error(cause), op(op), code(code) {}
+
+    OperationId op;
+    Code code;
+};
+
+struct OperandException : std::runtime_error {
+    OperandException(OperationId op, std::size_t position, const std::string& cause)
+        : op(op), position(position), runtime_error(cause) {}
+
+    OperandException(OperationId op, std::size_t position, const std::runtime_error& cause)
+        : op(op), position(position), runtime_error(cause.what()), internal_exception(cause) {}
+
+    std::optional<std::runtime_error> internal_exception {};
+    OperationId op;
+    std::size_t position;
 };
 
 }
