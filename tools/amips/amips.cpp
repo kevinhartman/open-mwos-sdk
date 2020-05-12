@@ -22,12 +22,10 @@ int main(int argc, const char* argv[]) {
     assembler::InputFileParser parser {};
     parser.Parse(in_file);
 
-    // create fake ROF for now
-    rof::ROFObjectFile rof;
-    rof.header.AsmVersion() = constants::AssemblerVersion;
-    rof.header.SyncBytes() = { 0xA, 0xB, 0xC, 0xD};
-    rof.header.Name() = "mockrof";
-    //
+    // create object
+    object::ObjectFile object;
+    object.assembler_version = constants::AssemblerVersion;
+    object.name = "mockrof";
 
     rof::ROFObjectWriter writer(support::Endian::big);
 
@@ -41,7 +39,7 @@ int main(int argc, const char* argv[]) {
         exit(1);
     }
 
-    writer.Write(rof, out_file);
+    writer.Write(object, out_file);
 
     return 0;
 }

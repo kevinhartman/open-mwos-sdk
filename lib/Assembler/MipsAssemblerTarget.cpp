@@ -13,6 +13,8 @@
 
 namespace assembler {
 
+using expression::Expression;
+
 namespace {
 
 uint32_t ParseRegister(std::string register_str) {
@@ -66,7 +68,6 @@ std::unique_ptr<Expression> ParseExpression(const std::string& expr_str) {
 
     return parser.Parse();
 }
-
 
 struct RT : std::optional<std::string> { using optional::optional; };
 struct RS : std::optional<std::string> { using optional::optional; };
@@ -167,8 +168,8 @@ constexpr bool IsArgSentinel(uint32_t field) {
 typedef std::tuple<RS, RT, RD, Shift> (*RTypeSyntaxFunc)(std::string);
 
 template <uint32_t OpCode, uint32_t RS, uint32_t RT, uint32_t RD, uint32_t Shift, uint32_t FuncCode, RTypeSyntaxFunc Syntax>
-Instruction RType(const Entry& entry) {
-    Instruction instruction {};
+object::Instruction RType(const Entry& entry) {
+    object::Instruction instruction {};
     instruction.data.u32 = OpCode << 26U | FuncCode;
     instruction.size = 4;
 
@@ -194,7 +195,7 @@ Instruction RType(const Entry& entry) {
 
     if constexpr (IsArgSentinel(Shift)) {
         instruction.expr_mappings.emplace_back(
-            ExpressionMapping{ 6, 5, ParseExpression(std::get<assembler::Shift>(operands).value())});
+            object::ExpressionMapping{ 6, 5, ParseExpression(std::get<assembler::Shift>(operands).value())});
     } else {
         instruction.data.u32 |= Shift << 6U;
     }
@@ -205,8 +206,8 @@ Instruction RType(const Entry& entry) {
 typedef std::tuple<RS, RT, Immediate> (*ITypeSyntaxFunc)(std::string);
 
 template <uint32_t OpCode, uint32_t RS, uint32_t RT, uint32_t Immediate, ITypeSyntaxFunc Syntax>
-Instruction IType(const Entry& entry) {
-    Instruction instruction {};
+object::Instruction IType(const Entry& entry) {
+    object::Instruction instruction {};
     instruction.data.u32 = OpCode << 26U;
     instruction.size = 4;
 
@@ -226,7 +227,7 @@ Instruction IType(const Entry& entry) {
 
     if constexpr (IsArgSentinel(Immediate)) {
         instruction.expr_mappings.emplace_back(
-            ExpressionMapping{ 0, 16, ParseExpression(std::get<assembler::Immediate>(operands).value()) });
+            object::ExpressionMapping{ 0, 16, ParseExpression(std::get<assembler::Immediate>(operands).value()) });
     } else {
         instruction.data.u32 |= Immediate;
     }
@@ -237,15 +238,15 @@ Instruction IType(const Entry& entry) {
 typedef std::tuple<Target> (*JTypeSyntaxFunc)(std::string);
 
 template <uint32_t OpCode, uint32_t Target, JTypeSyntaxFunc Syntax>
-Instruction JType(const Entry& entry) {
-    Instruction instruction {};
+object::Instruction JType(const Entry& entry) {
+    object::Instruction instruction {};
     instruction.data.u32 = OpCode << 26U;
     instruction.size = 4;
 
     auto operands = Syntax(entry.operands.value_or(""));
     if constexpr (IsArgSentinel(Target)) {
         instruction.expr_mappings.emplace_back(
-            ExpressionMapping{ 0, 26, ParseExpression(std::get<assembler::Target>(operands).value()) });
+            object::ExpressionMapping{ 0, 26, ParseExpression(std::get<assembler::Target>(operands).value()) });
     } else {
         instruction.data.u32 |= Target;
     }
@@ -253,7 +254,7 @@ Instruction JType(const Entry& entry) {
     return instruction;
 }
 
-Instruction ParseJALR(const Entry& entry) {
+    object::Instruction ParseJALR(const Entry& entry) {
     try {
         // TODO: catch correct exception only
         return RType<0b000000, Arg, 0b00000, Arg, 0b000000, 0b001001, RTypeTuple<RD, RS>>(entry);
@@ -272,7 +273,7 @@ Instruction ParseJALR(const Entry& entry) {
 }
 
 template <uint32_t OpCode>
-Instruction ParseCOPz(const Entry& entry) {
+object::Instruction ParseCOPz(const Entry& entry) {
     // JType looks to be the closest format, so we use it to fill the constant parts
     // of the instruction (OpCode and bit 25).
     auto instruction = JType<OpCode, 0x2000000, JTypeTuple<Target>>(entry);
@@ -282,16 +283,16 @@ Instruction ParseCOPz(const Entry& entry) {
     }
 
     // Add 25 bit Co-processor operation as expression.
-    instruction.expr_mappings.emplace_back(ExpressionMapping{ 0, 25, ParseExpression(entry.operands.value()) });
+    instruction.expr_mappings.emplace_back(object::ExpressionMapping{ 0, 25, ParseExpression(entry.operands.value()) });
 
     return instruction;
 }
 
-Instruction ThrowInvalidCoprocessor(const Entry& entry) {
+object::Instruction ThrowInvalidCoprocessor(const Entry& entry) {
     throw "Instruction not supported by coprocessor: " + entry.operation.value();
 }
 
-typedef Instruction (*ParseFunc)(const Entry&);
+typedef object::Instruction (*ParseFunc)(const Entry&);
 std::unordered_map<std::string, ParseFunc> instructions_fn = {
     { "add",    RType<0b000000, Arg, Arg, Arg, 0b00000, 0b100000, RTypeTuple<RD, RS, RT>> },
     { "addi",   IType<0b001000, Arg, Arg, Arg, ITypeTuple<RT, RS, Immediate>> },
@@ -397,7 +398,7 @@ support::Endian MipsAssemblerTarget::GetEndianness() {
     return endianness;
 }
 
-Instruction MipsAssemblerTarget::EmitInstruction(const Entry& entry) {
+object::Instruction MipsAssemblerTarget::EmitInstruction(const Entry& entry) {
     // TODO: return proper error for missing instruction.
     auto instruction = instructions_fn[entry.operation.value()](entry);
 

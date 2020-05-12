@@ -1,19 +1,21 @@
+#include <Expression.h>
+
 #include "AssemblerTypes.h"
 #include "AssemblyState.h"
-#include "StringUtil.h"
-
-#include "Expression.h"
 #include "ExpressionResolver.h"
+#include "StringUtil.h"
 
 #include <regex>
 
 namespace assembler {
 
+using expression::NumericConstantExpression;
+
 namespace {
 
 void ReadPSectParams(const Entry& entry, AssemblyState& state) {
     auto params = Split(entry.operands.value_or(""), std::regex(","));
-    auto& p_sect = state.psect;
+    object::PSect& p_sect = state.result.psect;
     
     if (params.size() > 7) {
         throw "too many parameters to psect directive";
@@ -72,7 +74,7 @@ bool HandleDirective(const Entry& entry, AssemblyState& state) {
     {
         if (state.in_psect) throw "nested psects aren't allowed";
         if (state.in_vsect) throw "psect may not appear with vsect";
-        if (state.psect.tylan) throw "psect already initialized. only 1 psect allowed per file";
+        if (state.result.psect.tylan) throw "psect already initialized. only 1 psect allowed per file";
 
         state.in_psect = true;
         ReadPSectParams(entry, state);

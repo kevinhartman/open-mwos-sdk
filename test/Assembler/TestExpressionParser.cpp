@@ -3,7 +3,7 @@
 #include "ComparisonHelpers.h"
 #include "PrinterHelpers.h"
 
-#include "Expression.h"
+#include <Expression.h>
 #include "ExpressionLexer.h"
 #include "ExpressionParser.h"
 
@@ -11,6 +11,9 @@
 #include <typeinfo>
 
 namespace assembler {
+
+using namespace expression;
+using namespace object;
 
 struct StringToExpression {
     std::string input_expression;

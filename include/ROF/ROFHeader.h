@@ -10,29 +10,6 @@ namespace rof {
 
 constexpr auto ROFSyncBytes = std::array<uint8_t , 4>{ 0xDE, 0xAD, 0xFA, 0xCE};
 
-enum Type {
-    Program = 1,
-    Subroutine = 2,
-    Multi = 3,
-    Data = 4,
-    ConfigStatusDescriptor = 5,
-
-    TrapHandlerLibrary = 11,
-    System = 12,
-    FileManager = 13,
-    DeviceDriver = 14,
-    DeviceDescriptor = 15
-};
-
-enum Lang {
-    ObjectCode = 1,
-    ICode = 2,
-    ICode_Pascal = 3,
-    ICode_C = 4,
-    ICode_Cobol = 5,
-    ICode_Fortran = 6
-};
-
 using SerializableROFHeader = SerializableStruct<
     SerializableArray<uint8_t, 4>, // TODO: can this work still with uint8_t? I changed it from char.
     SequenceOfType<uint16_t, 4>,

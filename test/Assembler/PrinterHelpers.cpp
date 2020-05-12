@@ -1,13 +1,14 @@
 #include "PrinterHelpers.h"
 
-#include "AssemblerTarget.h"
-#include "Expression.h"
+#include <Expression.h>
+#include <ObjectFile.h>
 
 #include <ostream>
 #include <sstream>
 #include <string>
 
-namespace assembler {
+namespace expression {
+
 struct PrintExpressionVisitor : ExpressionVisitor {
     void Visit(const NumericConstantExpression& expr) override {
         result << expr.value;
@@ -108,6 +109,9 @@ std::ostream& operator<<(std::ostream& os, const Expression& expr) {
     return os;
 }
 
+}
+
+namespace object {
 std::ostream &operator<<(std::ostream &os, const ExpressionMapping &expr) {
     os << "{ offset: " << expr.offset << " bit_count: " << expr.bit_count << " expression: " << *expr.expression;
     return os;

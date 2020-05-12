@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ObjectFile.h"
 #include "ROFHeader.h"
 #include "SerializableStruct.h"
 
@@ -31,6 +32,8 @@ struct ExternDefinition : SerializableExternDefinition {
 };
 
 /* == not part of ROF format -- used for internal tracking */
+// TODO: everything in this file should be serializable and the exact format
+//       of something in an ROF.
 enum DataEntryType {
     Byte,
     Half,
@@ -47,13 +50,5 @@ struct DataEntry {
 };
 
 // ==
-
-struct ROFObjectFile {
-    ROFHeader header {};
-    std::vector<ExternDefinition> external_definitions {};
-    std::vector<uint32_t> code {};
-    std::vector<DataEntry> initialized_data {};
-    std::vector<DataEntry> remote_initialized_data {};
-};
 
 }

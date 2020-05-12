@@ -4,7 +4,7 @@
 #include "AssemblyState.h"
 #include "ExpressionResolver.h"
 #include "Numeric.h"
-#include "ROFObjectFile.h"
+#include "ObjectFile.h"
 
 #include <limits>
 #include <vector>
@@ -16,62 +16,54 @@ extern bool HandleDirective(const Entry &entry, AssemblyState &state);
 
 namespace {
 
-void CreateExternalDefinitions(AssemblyState& state) {
-    auto& extern_definitions = state.result.external_definitions;
-    for (auto& elem : state.symbols) {
-        auto& [label, symbol] = elem.second;
+    // TODO: currently, PSect will contain straight up unresolved expressions.
+    //   That's why we need to resolve these values after processing the TU.
+    //   Without thinking, I moved PSect to object::ObjectFile, but that might've
+    //   been a mistake, since perhaps unresolved expressions should not leave
+    //   the assembler except for serialization. I need to think through that
+    //   abstraction.
+void SetObjectInfo(const AssemblyState& state, object::ObjectFile& object) {
+    object.name = state.result.psect.name;
 
-        if (label.is_global) {
-            rof::ExternDefinition definition {};
-            definition.Name() = label.name;
-            definition.Type() = symbol.
-            extern_definitions.emplace_back({})
-        }
-    }
-}
-
-void CreateHeader(uint16_t assembler_version, AssemblyState& state) {
-    auto& header = state.result.header;
-    header.Name() = state.psect.name;
-
-    auto tylan = ResolveExpression(*state.psect.tylan, state);
-    if (tylan > support::MaxRangeOf<decltype(header.TypeLanguage())>::value) {
+    auto tylan = ResolveExpression(*state.result.psect.tylan, state);
+    if (tylan > support::MaxRangeOf<decltype(object.tylan)>::value) {
         throw "tylan too big!";
     }
-    header.TypeLanguage() = tylan;
+    object.tylan = tylan;
 
-    auto attrev = ResolveExpression(*state.psect.revision, state);
-    if (attrev > support::MaxRangeOf<decltype(header.Revision())>::value) {
+    auto attrev = ResolveExpression(*state.result.psect.revision, state);
+    if (attrev > support::MaxRangeOf<decltype(object.revision)>::value) {
         throw "attrev too big!";
     }
-    header.Revision() = attrev;
+    object.revision = attrev;
 
-    // TODO: write non-zero if assembly fails? Why even produce ROF?
-    header.AsmValid() = 0;
-    header.AsmVersion() = assembler_version;
 
-    // TODO: For now, just 0'd. not sure the format. Could be DNP3?
-    header.AsmDate() = {0, 0, 0, 0, 0, 0};
-
-    auto edition = ResolveExpression(*state.psect.edition, state);
-    if (edition > support::MaxRangeOf<decltype(header.Edition())>::value) {
+    auto edition = ResolveExpression(*state.result.psect.edition, state);
+    if (edition > support::MaxRangeOf<decltype(object.edition)>::value) {
         throw "edition too big!";
     }
-    header.Edition() = edition;
+    object.edition = edition;
 
-    if (state.counter.uninitialized_data > support::MaxRangeOf<decltype(header.StaticDataSize())>::value) {
-        throw "Uninitialized counter got way too big!";
-    }
-    header.StaticDataSize() = state.counter.uninitialized_data;
-
-    // TODO: not done. needs to write all fields after static data size!
-    assert(false);
+    // TODO: this logic should be moved to ObjectFile implementations
+//    if (state.counter.uninitialized_data > support::MaxRangeOf<decltype(header.StaticDataSize())>::value) {
+//        throw "Uninitialized counter got way too big!";
+//    }
+//    header.StaticDataSize() = state.counter.uninitialized_data;
+//
+//    // Note: this impl not done. needs to write all fields after static data size!
+//    assert(false);
 }
 
-void CreateResult(AssemblyState& state) {
-
 }
 
+std::unique_ptr<object::ObjectFile> Assembler::CreateResult(AssemblyState& state) {
+    auto object_file = std::make_unique<object::ObjectFile>();
+
+    // Set assembler info
+    object_file->assembler_version = assembler_version;
+    object_file->assembly_time_epoch = 0; // TODO: get current time as epoch.
+
+    SetObjectInfo(state, *object_file);
 }
 
 Assembler::Assembler(uint16_t assembler_version, std::unique_ptr<AssemblerTarget> target)
@@ -86,13 +78,12 @@ bool Assembler::HandleDirective(const Entry& entry, AssemblyState& state) {
     return assembler::HandleDirective(entry, state);
 }
 
-void Assembler::Process(const std::vector<Entry> &listing) {
+std::unique_ptr<object::ObjectFile> Assembler::Process(const std::vector<Entry> &listing) {
     AssemblyState state {};
 
     for (auto& entry : listing) {
         if (state.found_program_end) {
-            CreateResult(state);
-            return;
+            return CreateResult(state);
         }
 
         if (entry.operation) {
@@ -107,7 +98,7 @@ void Assembler::Process(const std::vector<Entry> &listing) {
             auto instruction = target->EmitInstruction(entry);
 
             // Add instruction to code section.
-            state.psect.code[state.counter.code] = std::move(instruction);
+            state.result.psect.code[state.counter.code] = std::move(instruction);
             state.counter.code += instruction.size;
         } else {
             if (entry.label) {
@@ -117,7 +108,7 @@ void Assembler::Process(const std::vector<Entry> &listing) {
         }
     }
 
-    CreateResult(state);
+    return CreateResult(state);
 }
 
 }

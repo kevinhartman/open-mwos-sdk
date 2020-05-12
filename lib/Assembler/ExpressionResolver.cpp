@@ -1,7 +1,7 @@
 #include "ExpressionResolver.h"
 
 #include "AssemblyState.h"
-#include "Expression.h"
+#include <Expression.h>
 #include "ExpressionLexer.h"
 #include "ExpressionParser.h"
 
@@ -10,6 +10,8 @@
 namespace assembler {
 
 namespace {
+
+using namespace expression;
 
 using ReferenceResolver = std::function<uint32_t(const Expression&)>;
 struct ResolverVisitor : ExpressionVisitor {

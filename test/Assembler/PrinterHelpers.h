@@ -1,13 +1,14 @@
 #pragma once
 
-#include "Expression.h"
+#include <Expression.h>
+#include <ObjectFile.h>
 
 #include <ostream>
 
-namespace assembler {
+namespace expression {
 std::ostream &operator<<(std::ostream &os, const Expression &expr);
+}
 
-class ExpressionMapping;
+namespace object {
 std::ostream &operator<<(std::ostream &os, const ExpressionMapping &expr);
-
 }

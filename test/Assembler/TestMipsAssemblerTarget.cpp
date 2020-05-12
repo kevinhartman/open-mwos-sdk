@@ -21,7 +21,7 @@ namespace assembler {
     struct InstructionToExpected {
         Entry input_instruction;
         std::string expected_capstone_str;
-        std::vector<ExpressionMapping> expected_expr_mappings;
+        std::vector<object::ExpressionMapping> expected_expr_mappings;
     };
 
     auto MakeEntry(std::string operation, std::optional<std::string> operand_str) {
@@ -30,14 +30,14 @@ namespace assembler {
 
     template <typename ...T>
     auto MakeExpressionMappings(T&&... mappings) {
-        return std::vector<ExpressionMapping> { std::forward<T>(mappings)... };
+        return std::vector<object::ExpressionMapping> { std::forward<T>(mappings)... };
     }
 
-    ExpressionMapping MakeExpressionMapping(size_t offset, size_t bit_count, std::string expression_str) {
+    object::ExpressionMapping MakeExpressionMapping(size_t offset, size_t bit_count, std::string expression_str) {
         ExpressionLexer lexer(expression_str);
         ExpressionParser parser(lexer);
 
-        return ExpressionMapping { offset, bit_count, parser.Parse() };
+        return object::ExpressionMapping { offset, bit_count, parser.Parse() };
     }
 
     std::optional<std::string> DecodeWithCapstone(uint32_t instruction) {

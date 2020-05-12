@@ -5,7 +5,7 @@
 #include <memory>
 #include <string>
 
-namespace assembler {
+namespace expression {
 
 using ExpressionVisitorTypes = visitor::VisitorTypes<
     const struct NumericConstantExpression&,

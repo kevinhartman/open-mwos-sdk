@@ -10,6 +10,8 @@ namespace assembler {
 
 namespace {
 
+using namespace expression;
+
 struct PrefixParselet {
     virtual std::unique_ptr<Expression> Parse(ExpressionParser& parser, Token token) const = 0;
 };

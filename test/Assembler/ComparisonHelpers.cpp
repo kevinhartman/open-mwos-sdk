@@ -1,12 +1,13 @@
 #include "ComparisonHelpers.h"
 
-#include "Expression.h"
-#include "AssemblerTarget.h"
+#include <Expression.h>
+#include <ObjectFile.h>
 
 #include <typeinfo>
 
-namespace assembler {
-bool operator==(const Expression &e1, const Expression &e2) {
+namespace expression {
+
+bool operator==(const expression::Expression &e1, const expression::Expression &e2) {
     if (typeid(e1) != typeid(e2)) {
         return false;
     }
@@ -40,8 +41,10 @@ bool operator==(const Expression &e1, const Expression &e2) {
     return false;
 }
 
-bool operator==(const ExpressionMapping &e1, const ExpressionMapping &e2) {
-    return std::tie(e1.offset, e1.bit_count, *e1.expression) == std::tie(e2.offset, e2.bit_count, *e2.expression);
 }
 
+namespace object {
+    bool operator==(const ExpressionMapping &e1, const ExpressionMapping &e2) {
+        return std::tie(e1.offset, e1.bit_count, *e1.expression) == std::tie(e2.offset, e2.bit_count, *e2.expression);
+    }
 }

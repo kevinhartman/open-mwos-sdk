@@ -1,38 +1,44 @@
 #include "AssemblyState.h"
 #include "AssemblerTypes.h"
 #include "Bitwise.h"
-#include "Expression.h"
+#include "../../include/Expression/Expression.h"
 #include "ExpressionResolver.h"
 
 #include <iterator>
 #include <unordered_map>
+#include <ObjectFile.h>
 
 namespace assembler {
 
 namespace {
 
-void CreateSymbolsHere(SymbolInfo::Type symbol_type, bool is_signed, AssemblyState& state) {
+void CreateSymbolsHere(object::SymbolInfo::Type symbol_type, bool is_signed, AssemblyState& state) {
     auto counter = [symbol_type, &state]() {
         switch (symbol_type) {
-            case SymbolInfo::Type::UninitData:
+            case object::SymbolInfo::Type::UninitData:
                 return state.counter.uninitialized_data;
-            case SymbolInfo::Type::RemoteUninitData:
+            case object::SymbolInfo::Type::RemoteUninitData:
                 return state.counter.remote_uninitialized_data;
-            case SymbolInfo::Type::InitData:
+            case object::SymbolInfo::Type::InitData:
                 return state.counter.initialized_data;
-            case SymbolInfo::Type::RemoteInitData:
+            case object::SymbolInfo::Type::RemoteInitData:
                 return state.counter.remote_initialized_data;
-            case SymbolInfo::Type::Code:
+            case object::SymbolInfo::Type::Code:
                 return state.counter.code;
         }
     };
 
     for (auto& label : state.pending_labels) {
-        if (state.symbols.count(label.name) > 0) {
+        if (state.symbol_name_to_label.count(label.name) > 0) {
             throw "symbol is already defined!";
         }
 
-        state.symbols[label.name] = { label, SymbolInfo { symbol_type, is_signed, counter() } };
+        // Map symbol name to original label for assembly state.
+        state.symbol_name_to_label[label.name] = label;
+
+        // Add symbol to result object file.
+        auto& symbols = label.is_global ? state.result.global_symbols : state.result.local_symbols;
+        symbols[label.name] = object::SymbolInfo { symbol_type, is_signed, counter() };
     }
 }
 
@@ -66,7 +72,7 @@ void Op_DS(const Entry& entry, AssemblyState& state) {
     }
 
     CreateSymbolsHere(
-        state.in_remote_vsect ? SymbolInfo::Type::RemoteUninitData : SymbolInfo::Type::UninitData,
+        state.in_remote_vsect ? object::SymbolInfo::Type::RemoteUninitData : object::SymbolInfo::Type::UninitData,
         IsSigned,
         state);
 
@@ -83,7 +89,7 @@ void Op_Align(const Entry& entry, AssemblyState& state) {
     if (entry.operands) {
         auto expr = ParseExpression(entry.operands.value());
 
-        auto as_numeric = dynamic_cast<NumericConstantExpression *>(expr.get());
+        auto as_numeric = dynamic_cast<expression::NumericConstantExpression *>(expr.get());
         if (as_numeric == nullptr) {
             throw "alignment must be numeric constant expression";
         }
