@@ -25,10 +25,12 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include <type_traits>
 #include "BinarySectionReader.hpp"
 #include "ModuleUtils.hpp"
 #include "CrcGenerator.hpp"
+
+#include <cstring>
+#include <type_traits>
 
 namespace module::util {
 

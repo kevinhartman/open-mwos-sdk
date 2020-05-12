@@ -3,6 +3,7 @@
 #include <Expression.h>
 #include <ObjectFile.h>
 
+#include <cassert>
 #include <typeinfo>
 
 namespace expression {

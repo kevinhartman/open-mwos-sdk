@@ -85,16 +85,16 @@ void PrintModuleInfo(Module& module, std::ostream& output_stream) {
     output_stream << std::endl;
 
     output_stream << "Type: ";
-    output_stream << (uint)(header->TypeLanguage() >> 8U) << std::endl;
+    output_stream << (uint16_t)(header->TypeLanguage() >> 8U) << std::endl;
 
     output_stream << "Language: ";
-    output_stream << (uint)(header->TypeLanguage() & 0x00FFU) << std::endl;
+    output_stream << (uint16_t)(header->TypeLanguage() & 0x00FFU) << std::endl;
 
     output_stream << "Attributes: ";
-    output_stream << (uint)(header->AttRev() >> 8U) << std::endl;
+    output_stream << (uint16_t)(header->AttRev() >> 8U) << std::endl;
 
     output_stream << "Attributes Revision: ";
-    output_stream << (uint)(header->AttRev() & 0x00FFU) << std::endl;
+    output_stream << (uint16_t)(header->AttRev() & 0x00FFU) << std::endl;
 
     output_stream << "Vendor Edition: ";
     output_stream << header->Edition() << std::endl;

@@ -7,9 +7,10 @@
 #include "AssemblyState.h"
 #include "Operation.h"
 
+#include <cassert>
 #include <unordered_map>
 
-namespace {
+namespace assembler {
 
 using expression::NumericConstantExpression;
 

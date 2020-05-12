@@ -32,7 +32,7 @@ struct Rof15Header : SerializableRof15Header {
     auto& StaticDataSize() { return std::get<7>(*this); }
     auto& InitializedDataSize() { return std::get<8>(*this); }
 
-    __deprecated_msg("Reserved.")
+    // Reserved
     auto& ConstantDataSize() { return std::get<9>(*this); }
 
     auto& CodeSize() { return std::get<10>(*this); }
@@ -42,15 +42,16 @@ struct Rof15Header : SerializableRof15Header {
     auto& RemoteStaticDataSizeRequired() { return std::get<14>(*this); }
     auto& RemoteInitializedDataSizeRequired() { return std::get<15>(*this); }
 
-    __deprecated_msg("Reserved.")
+    // Reserved
     auto& RemoteConstantDataSizeRequired() { return std::get<16>(*this); }
 
     auto& DebugInfoSize() { return std::get<17>(*this); }
     auto& TargetCPU() { return std::get<18>(*this); }
     auto& CodeInfo() { return std::get<19>(*this); }
 
-    __deprecated_msg("Reserved.")
+    // Reserved
     auto& HeaderExpansion() { return std::get<20>(*this); }
+
     auto& Name() { return std::get<21>(*this); }
 };
 

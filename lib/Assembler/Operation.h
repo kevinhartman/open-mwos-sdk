@@ -10,10 +10,8 @@
 #include <regex>
 #include <sstream>
 
-namespace {
-
-using namespace assembler;
-
+namespace assembler {
+    
 struct OperandInfo {
     std::string op {};
     std::size_t index {};

@@ -46,6 +46,7 @@ uint16_t GetCPUIdentifier(object::CpuTarget cpu_target) {
         case CpuTarget::os9k_armbe: return 0xB00;
         case CpuTarget::os9k_armv5: return 0xB01;
         case CpuTarget::os9k_sh4a: return 0x902;
+        default: return 0;
     }
 }
 
