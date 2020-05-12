@@ -8,7 +8,6 @@ add_executable(test-toolchain-libs
         test-toolchain-libs.cpp
         Assembler/ComparisonHelpers.cpp
         Assembler/PrinterHelpers.cpp
-        Assembler/TestAssembler.cpp
         Assembler/TestAssemblerPseudoInstHandler.cpp
         Assembler/TestInputFileParser.cpp
         Assembler/TestExpressionLexer.cpp
