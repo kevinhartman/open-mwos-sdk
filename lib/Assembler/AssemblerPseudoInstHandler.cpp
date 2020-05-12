@@ -54,9 +54,15 @@ namespace {
  *   - EQU and SETs in <expr> names will only work if they were defined lexically
  *     before the current DS directive. This is correct behavior for Set but that's
  *     not clear in the case of EQU.
- *   - We currently allow code and data references in the expression if they
- *     were defined earlier, but this behavior isn't supported based on
- *     tests.
+ *   - We correctly allow code and data references in the expression if they
+ *     were defined earlier, but we need to check that they're subtracted from each other,
+ *     since absolute values of counters are apparently disallowed.
+ *   - It seems like DS is allowed outside of a psect.
+ *     From Ultra C usage guide:
+ *     > Although technically a vsect can appear outside the psect, the usefulness
+ *     > of such a vsect is limited to defining the expected type of an external
+ *     > symbol as a data area symbol because actual storage would not be assigned
+ *     > to it by the linker.
  *
  * @tparam Size
  * @tparam IsSigned
@@ -72,7 +78,7 @@ void Op_DS(std::unique_ptr<Operation> operation, AssemblyState& state) {
         operation->Fail(OperationException::Code::NeedsVSectContext, context_err_msg);
 
     auto operands = operation->ParseOperands();
-    auto size_operand = operands.GetExpression(0, "expr");
+    auto count_operand = operands.GetExpression(0, "count");
 
     // If a label was provided inline, add it to pending labels.
     auto label_opt = operation->GetEntry().label;
@@ -83,10 +89,10 @@ void Op_DS(std::unique_ptr<Operation> operation, AssemblyState& state) {
     ExpressionResolver resolver(state);
 
     // We need to resolve the size (count) expression *now*, since we must know by how much to increment data counter.
-    auto count = size_operand->Resolve(resolver);
+    auto count = count_operand->Resolve(resolver);
     if (count < 1) {
         // count cannot be < 1, since this would result in a symbol of size 0!
-        size_operand->Fail("must be > 0");
+        count_operand->Fail("must be > 0");
     }
 
     auto increment = count * Size;
