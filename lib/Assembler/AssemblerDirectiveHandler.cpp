@@ -178,7 +178,15 @@ void Op_Psect(std::unique_ptr<Operation> operation, AssemblyState& state) {
             result.edition = get(*p_sect.edition);
             result.stack_size = get(*p_sect.stack);
             result.entry_offset = get(*p_sect.entry_offset);
-            result.trap_handler_offset = get(*p_sect.trap_handler_offset);
+
+            // Note: docs say non-specified for *all* should default to 0, but examining
+            // trapent it appears to be max int.
+            // TODO: this isn't very clean.
+            result.trap_handler_offset = default_mode
+                ? 0xFFFFFFFF
+                : p_sect.trap_handler_offset
+                    ? p_sect.trap_handler_offset->Resolve(resolver)
+                    : 0xFFFFFFFF;
         }
     );
 
