@@ -9,10 +9,10 @@ namespace assembler {
 
 class MipsAssemblerTarget : public AssemblerTarget {
 public:
-    explicit MipsAssemblerTarget(support::Endian endianness);
+    explicit MipsAssemblerTarget(support::Endian);
     ~MipsAssemblerTarget() override;
-    support::Endian GetEndianness() override;
-    Instruction EmitInstruction(const Entry& entry) override;
+    Instruction EmitInstruction(const Entry&) override;
+    void SetTargetSpecificProperties(object::ObjectFile&) override;
 
 private:
     support::Endian endianness;

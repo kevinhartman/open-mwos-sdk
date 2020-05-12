@@ -8,8 +8,8 @@
 #include <regex>
 #include <vector>
 #include <tuple>
-#include <AssemblerTarget.h>
 #include <unordered_map>
+#include <ObjectFile.h>
 
 namespace assembler {
 
@@ -394,8 +394,9 @@ std::unordered_map<std::string, ParseFunc> instructions_fn = {
 MipsAssemblerTarget::MipsAssemblerTarget(support::Endian endianness) : endianness(endianness) { };
 MipsAssemblerTarget::~MipsAssemblerTarget() = default;
 
-support::Endian MipsAssemblerTarget::GetEndianness() {
-    return endianness;
+void MipsAssemblerTarget::SetTargetSpecificProperties(object::ObjectFile& object_file) {
+    object_file.cpu_target = object::CpuTarget::os9k_mips;
+    object_file.endian = endianness;
 }
 
 Instruction MipsAssemblerTarget::EmitInstruction(const Entry& entry) {

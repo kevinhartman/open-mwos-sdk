@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Endian.h>
 #include <Expression.h>
 
 #include <cstdint>
@@ -7,6 +8,7 @@
 #include <string>
 #include <variant>
 #include <vector>
+#include <ctime>
 
 namespace object {
 
@@ -35,6 +37,23 @@ enum class Lang {
     ICode_C = 4,
     ICode_Cobol = 5,
     ICode_Fortran = 6
+};
+
+enum class CpuTarget {
+    os9_68k,
+    os9k_386,
+    os9k_68k,
+    os9k_ppc,
+    os9k_sh5m,
+    os9k_mips,
+    os9k_sh,
+    os9k_arm,
+    os9k_sparc,
+    os9k_rce,
+    os9k_sh4,
+    os9k_armbe,
+    os9k_armv5,
+    os9k_sh4a
 };
 
 struct Data {
@@ -67,6 +86,7 @@ struct SymbolInfo {
 struct ObjectFile {
     uint16_t assembler_version;
     uint64_t assembly_time_epoch;
+    std::time_t assembly_time;
 
     std::string name;
     uint16_t tylan;
@@ -76,6 +96,9 @@ struct ObjectFile {
     u_int32_t stack_size;
     u_int32_t entry_offset;
     u_int32_t trap_handler_offset;
+
+    CpuTarget cpu_target;
+    support::Endian endian;
 
     struct {
         size_t code;

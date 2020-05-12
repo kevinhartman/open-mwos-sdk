@@ -7,6 +7,10 @@
 #include <Expression.h>
 #include "Endian.h"
 
+namespace object {
+    class ObjectFile;
+}
+
 namespace assembler {
 
 struct ExpressionMapping {
@@ -32,9 +36,10 @@ class Entry;
 class AssemblerTarget {
 public:
     virtual ~AssemblerTarget() = default;
-    virtual support::Endian GetEndianness() = 0;
-    virtual Instruction EmitInstruction(const Entry& entry) = 0;
+    virtual Instruction EmitInstruction(const Entry&) = 0;
     // TODO: PatchInstruction() for applying expression result to instruction? Perhaps not needed.
+    virtual void SetTargetSpecificProperties(object::ObjectFile&) = 0;
+
 };
 
 }

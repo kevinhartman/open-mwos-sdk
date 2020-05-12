@@ -80,6 +80,9 @@ Assembler::~Assembler() = default;
 std::unique_ptr<object::ObjectFile> Assembler::Process(const std::vector<Entry> &listing) {
     AssemblyState state {};
 
+    // Set target CPU ID and endianness on object file.
+    target->SetTargetSpecificProperties(*state.result);
+
     for (auto& entry : listing) {
         if (state.found_program_end) {
             break;
@@ -122,6 +125,11 @@ std::unique_ptr<object::ObjectFile> Assembler::Process(const std::vector<Entry> 
     for (auto& action : state.second_pass_queue2) {
         (*action)(state);
     }
+    
+    // Set static properties.
+    using clock = std::chrono::system_clock;
+    auto now = clock::now();
+    state.result->assembly_time = clock::to_time_t(now);
 
     return std::move(state.result);
 }

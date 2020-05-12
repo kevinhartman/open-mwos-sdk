@@ -1,7 +1,5 @@
 #pragma once
 
-#include <Endian.h>
-
 #include <ostream>
 
 namespace object {
@@ -12,11 +10,8 @@ namespace rof {
 
 class Rof15ObjectWriter {
 public:
-    Rof15ObjectWriter(support::Endian endianness);
-    void Write(const object::ObjectFile& object_file, std::ostream& out) const;
-
-private:
-    support::Endian endianness;
+    explicit Rof15ObjectWriter();
+    void Write(const object::ObjectFile&, std::ostream&) const;
 };
 
 }

@@ -3,6 +3,8 @@
 
 #include "amips.h"
 
+#include <Assembler.h>
+#include <MipsAssemblerTarget.h>
 #include "InputFileParser.h"
 #include "Rof15ObjectFile.h"
 #include "Rof15ObjectWriter.h"
@@ -22,12 +24,12 @@ int main(int argc, const char* argv[]) {
     assembler::InputFileParser parser {};
     parser.Parse(in_file);
 
-    // create object
-    object::ObjectFile object;
-    object.assembler_version = constants::AssemblerVersion;
-    object.name = "mockrof";
+    auto target = std::make_unique<assembler::MipsAssemblerTarget>(support::Endian::big);
+    assembler::Assembler a(constants::AssemblerVersion, std::move(target));
 
-    rof::Rof15ObjectWriter writer(support::Endian::big);
+    auto object = a.Process(parser.GetListing());
+
+    rof::Rof15ObjectWriter writer {};
 
     std::fstream out_file;
     out_file.exceptions(std::fstream::badbit | std::fstream::failbit);
@@ -39,7 +41,7 @@ int main(int argc, const char* argv[]) {
         exit(1);
     }
 
-    writer.Write(object, out_file);
+    writer.Write(*object, out_file);
 
     return 0;
 }

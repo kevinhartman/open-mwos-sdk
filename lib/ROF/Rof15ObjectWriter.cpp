@@ -7,6 +7,7 @@
 #include <cassert>
 #include <limits>
 #include <utility>
+#include <chrono>
 
 namespace rof {
 
@@ -28,6 +29,40 @@ void AssertValid(const object::ObjectFile& object_file) {
         throw "Remote initialized counter too big for ROF.";
 }
 
+uint16_t GetCPUIdentifier(object::CpuTarget cpu_target) {
+    using namespace object;
+    switch (cpu_target) {
+        case CpuTarget::os9_68k: return 0x100;
+        case CpuTarget::os9k_386: return 0x200;
+        case CpuTarget::os9k_68k: return 0x100;
+        case CpuTarget::os9k_ppc: return 0x300;
+        case CpuTarget::os9k_sh5m: return 0x400;
+        case CpuTarget::os9k_mips: return 0x800;
+        case CpuTarget::os9k_sh: return 0x900;
+        case CpuTarget::os9k_arm: return 0x500;
+        case CpuTarget::os9k_sparc: return 0xA00;
+        case CpuTarget::os9k_rce: return 0x700;
+        case CpuTarget::os9k_sh4: return 0x901;
+        case CpuTarget::os9k_armbe: return 0xB00;
+        case CpuTarget::os9k_armv5: return 0xB01;
+        case CpuTarget::os9k_sh4a: return 0x902;
+    }
+}
+
+std::array<uint8_t, 6> GetDateTime(const std::time_t& time) {
+    std::array<uint8_t, 6> result {};
+
+    struct tm *parts = std::localtime(&time);
+    result[0] = parts->tm_year;
+    result[1] = parts->tm_mon;
+    result[2] = parts->tm_mday;
+    result[3] = parts->tm_hour;
+    result[4] = parts->tm_min;
+    result[5] = parts->tm_sec;
+
+    return result;
+}
+
 // TODO: use logic within write method and then delete.
 Rof15Header GetHeader(const object::ObjectFile& object_file) {
     Rof15Header header {};
@@ -39,7 +74,7 @@ Rof15Header GetHeader(const object::ObjectFile& object_file) {
     header.AsmVersion() = object_file.assembler_version;
 
     // TODO: For now, just 0'd. not sure the format. Could be DNP3? Convert from epoch above^
-    header.AsmDate() = {0, 0, 0, 0, 0, 0};
+    header.AsmDate() = GetDateTime(object_file.assembly_time);
     header.Edition() = object_file.edition;
 
     header.StaticDataSize() = object_file.counter.uninitialized_data;
@@ -53,7 +88,7 @@ Rof15Header GetHeader(const object::ObjectFile& object_file) {
     header.RemoteInitializedDataSizeRequired() = object_file.counter.remote_initialized_data;
     header.DebugInfoSize() = 0; // TODO: for now, this is unimplemented
 
-    // TODO: add target CPU type here.
+    header.TargetCPU() = GetCPUIdentifier(object_file.cpu_target);
 
     // TODO: add "code" information here. i.e. flags about threading etc.
 
@@ -95,18 +130,21 @@ std::vector<DataEntry> GetRemoteInitializedData(const object::ObjectFile& object
 }
 }
 
-Rof15ObjectWriter::Rof15ObjectWriter(support::Endian endianness) : endianness(endianness) { }
+Rof15ObjectWriter::Rof15ObjectWriter() { }
 
 void Rof15ObjectWriter::Write(const object::ObjectFile& object_file, std::ostream& out) const {
     AssertValid(object_file);
+
+    support::Endian endian = object_file.endian;
 
     auto header = GetHeader(object_file);
 
     const auto& extern_defs = GetExternalDefinitions(object_file);
     const auto& code = GetCode(object_file);
 
-    auto serialize = [&out, this](auto data) {
-        serializer::Serialize(data, out, endianness);
+    // TODO: is this supposed to copy data? why isn't it a ref?
+    auto serialize = [&out, this, endian](auto data) {
+        serializer::Serialize(data, out, endian);
     };
 
     // Write header to file
