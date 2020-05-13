@@ -1,3 +1,5 @@
+[![CI](https://github.com/kevinhartman/os9-toolchain/workflows/CI/badge.svg)](https://github.com/kevinhartman/os9-toolchain/actions?query=workflow%3ACI)
+
 This project aims to be an open source toolchain for developing applications for the Microware OS-9 portable operating system. It's implemented using publicly available documentation.
 
 ## Status
