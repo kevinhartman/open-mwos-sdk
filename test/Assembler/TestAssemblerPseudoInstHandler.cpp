@@ -130,4 +130,160 @@ SCENARIO("DS operation behavior", "[assembler]") {
         }
     }
 }
+
+SCENARIO("DC operation behavior", "[assembler]") {
+    AssemblerPseudoInstHandler handler {};
+
+    GIVEN("multiple unsigned constant bytes declared with the label 'var'") {
+        auto entry = ParseEntry(R"(var dc.b 4/4,6,2-1)");
+
+        WHEN("state is in psect context") {
+            AssemblyState state {};
+            state.in_psect = true;
+
+            auto& data_map = state.psect.code_data;
+
+            REQUIRE(handler.Handle(entry, state));
+            REQUIRE(state.result->counter.code == 3);
+
+            for (std::size_t i = 0; i < 3; i++) {
+                REQUIRE(data_map[i].size == 1);
+                REQUIRE(data_map[i].is_signed == false);
+            }
+
+            // Invoke second pass.
+            for (auto& action : state.second_pass_queue2) {
+                (*action)(state);
+            }
+
+            REQUIRE(state.result->code == std::vector<uint8_t>{ 1, 6, 1 });
+            //REQUIRE(state.GetSymbol("var") == object::SymbolInfo { object::SymbolInfo::Type::UninitData, false, 0 });
+        }
+
+        WHEN("state is in a vsect and psect context") {
+            AssemblyState state {};
+            state.in_psect = true;
+            state.in_vsect = true;
+
+            auto& data_map = state.psect.initialized_data;
+
+            REQUIRE(handler.Handle(entry, state));
+            REQUIRE(state.result->counter.initialized_data == 3);
+
+            for (std::size_t i = 0; i < 3; i++) {
+                REQUIRE(data_map[i].size == 1);
+                REQUIRE(data_map[i].is_signed == false);
+            }
+
+            // Invoke second pass.
+            for (auto& action : state.second_pass_queue2) {
+                (*action)(state);
+            }
+
+            REQUIRE(state.result->initialized_data == std::vector<uint8_t>{ 1, 6, 1 });
+            //REQUIRE(state.GetSymbol("var") == object::SymbolInfo { object::SymbolInfo::Type::UninitData, false, 0 });
+        }
+
+        WHEN("state is in a remote vsect and psect context") {
+            AssemblyState state {};
+            state.in_psect = true;
+            state.in_vsect = true;
+            state.in_remote_vsect = true;
+
+            auto& data_map = state.psect.remote_initialized_data;
+
+            REQUIRE(handler.Handle(entry, state));
+            REQUIRE(state.result->counter.remote_initialized_data == 3);
+
+            for (std::size_t i = 0; i < 3; i++) {
+                REQUIRE(data_map[i].size == 1);
+                REQUIRE(data_map[i].is_signed == false);
+            }
+
+            // Invoke second pass.
+            for (auto& action : state.second_pass_queue2) {
+                (*action)(state);
+            }
+
+            REQUIRE(state.result->remote_initialized_data == std::vector<uint8_t>{ 1, 6, 1 });
+            //REQUIRE(state.GetSymbol("var") == object::SymbolInfo { object::SymbolInfo::Type::UninitData, false, 0 });
+        }
+    }
+
+    GIVEN("multiple unsigned constant words declared with the label 'var'") {
+        auto entry = ParseEntry(R"(var dc.w 4/4,6,2-1)");
+
+        WHEN("state is in psect context") {
+            AssemblyState state {};
+            state.in_psect = true;
+
+            auto& data_map = state.psect.code_data;
+
+            REQUIRE(handler.Handle(entry, state));
+            REQUIRE(state.result->counter.code == 6);
+
+            for (std::size_t i = 0; i < 6; i += 2) {
+                REQUIRE(data_map[i].size == 2);
+                REQUIRE(data_map[i].is_signed == false);
+            }
+
+            // Invoke second pass.
+            for (auto& action : state.second_pass_queue2) {
+                (*action)(state);
+            }
+
+            REQUIRE(state.result->code == std::vector<uint8_t>{ 1, 6, 1 });
+            //REQUIRE(state.GetSymbol("var") == object::SymbolInfo { object::SymbolInfo::Type::UninitData, false, 0 });
+        }
+
+        WHEN("state is in a vsect and psect context") {
+            AssemblyState state {};
+            state.in_psect = true;
+            state.in_vsect = true;
+
+            auto& data_map = state.psect.initialized_data;
+
+            REQUIRE(handler.Handle(entry, state));
+            REQUIRE(state.result->counter.initialized_data == 6);
+
+            for (std::size_t i = 0; i < 6; i += 2) {
+                REQUIRE(data_map[i].size == 2);
+                REQUIRE(data_map[i].is_signed == false);
+            }
+
+            // Invoke second pass.
+            for (auto& action : state.second_pass_queue2) {
+                (*action)(state);
+            }
+
+            REQUIRE(state.result->initialized_data == std::vector<uint8_t>{ 1, 6, 1 });
+            //REQUIRE(state.GetSymbol("var") == object::SymbolInfo { object::SymbolInfo::Type::UninitData, false, 0 });
+        }
+
+        WHEN("state is in a remote vsect and psect context") {
+            AssemblyState state {};
+            state.in_psect = true;
+            state.in_vsect = true;
+            state.in_remote_vsect = true;
+
+            auto& data_map = state.psect.remote_initialized_data;
+
+            REQUIRE(handler.Handle(entry, state));
+            REQUIRE(state.result->counter.remote_initialized_data == 6);
+
+            for (std::size_t i = 0; i < 6; i += 2) {
+                REQUIRE(data_map[i].size == 2);
+                REQUIRE(data_map[i].is_signed == false);
+            }
+
+            // Invoke second pass.
+            for (auto& action : state.second_pass_queue2) {
+                (*action)(state);
+            }
+
+            REQUIRE(state.result->remote_initialized_data == std::vector<uint8_t>{ 1, 6, 1 });
+            //REQUIRE(state.GetSymbol("var") == object::SymbolInfo { object::SymbolInfo::Type::UninitData, false, 0 });
+        }
+    }
+}
 }
