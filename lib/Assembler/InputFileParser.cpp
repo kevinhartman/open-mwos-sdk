@@ -11,13 +11,6 @@
 
 namespace assembler {
 
-constexpr std::initializer_list<std::string_view> SpecialNoCommentDirectives = {
-    "fail",
-    "nam",
-    "opt",
-    "ttl"
-};
-
 InputFileParser::InputFileParser() : listing({}) {};
 InputFileParser::~InputFileParser() = default;
 
@@ -119,7 +112,12 @@ std::string InputFileParser::ParseOperands(const std::string& line, Entry& entry
 }
 
 void InputFileParser::Parse(std::istream& lines) {
-    static std::unordered_set<std::string_view> special = SpecialNoCommentDirectives;
+    static std::unordered_set<std::string_view> special = {
+        "fail",
+        "nam",
+        "opt",
+        "ttl"
+    };
 
     std::string line;
     while (std::getline(lines, line)) {
