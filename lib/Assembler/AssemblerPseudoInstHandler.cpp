@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include <ObjectFile.h>
 
+#include <sstream>
 #include <variant>
 
 namespace assembler {
@@ -22,6 +23,121 @@ namespace assembler {
 //     clear error message should inform the user that these expressions must be constexpr.
 
 namespace {
+
+
+/**
+ * Ultra C Usage Guide:
+ *
+ * > Syntax
+ * >   <label> dc.<size> <expression>{,<expression>}
+ * > Description
+ * >   dc generates sequences of one or more constants (initialized data) of various sizes
+ * >   within the program. The argument is a list of one or more expressions or character
+ * >   strings. If more than one expression or string is used, they are separated by commas.
+ * >
+ * >   The .<size> extension can be any of the below sizes:
+ * >   - .b for bytes
+ * >   - .sb for signed bytes
+ * >   - .w for words (16-bit, default)
+ * >   - .sw for signed words (16-bit)
+ * >   - .l for longwords (32-bit)
+ * >   - .sl for signed long words (32-bit)
+ * >
+ * >   The signed variants give the linker additional information about the nature of
+ * >   a reference.
+ * >
+ * >   For example, if a signed word (.sw) external reference appeared in one psect and
+ * >   another psect defined the value as 0xf000. The linker would complain about the value
+ * >   0xf000 being too large to express in a 16-bit signed field. The linker would not have
+ * >   complained if plain .w were used on the external reference.
+ * >
+ * >   Use the signed variants to ensure that large positive values are not accidentally
+ * >   interpreted as negative values.
+ * >
+ * >   A dc used in a vsect creates an initialized data variable (read/write) in the process’
+ * >   data area. The initialization value is stored in a special section of the object code
+ * >   and is copied to the appropriate locations in the data area by the operating system.
+ * >
+ * >   A dc located outside a vsect creates read-only constants in the program area.
+ * >   The program should not change these constants.
+ * >
+ * >   Character string constants can be any sequence of printable ASCII characters enclosed
+ * >   in double quotes. For dc.w and dc.l, a string constant is padded with zeroes on the right
+ * >   end if it does not fill the final word or long word. Therefore, dc.b is the most natural
+ * >   format for strings.
+ *
+ * Notes:
+ * Initialized data cannot exist in a VSect that is not nested within a Psect, since counters
+ * do not work outside of psects.
+ *
+ * @tparam Size
+ * @tparam IsSigned
+ * @param operation
+ * @param state
+ */
+template<size_t Size, bool IsSigned>
+void Op_DC(std::unique_ptr<Operation> operation, AssemblyState& state) {
+    constexpr auto context_err_msg = "must be in vsect within psect.";
+    if (!state.in_psect)
+        operation->Fail(OperationException::Code::NeedsPSectContext, context_err_msg);
+
+    auto operands = operation->ParseOperands(Operation::SplitOnCommaRespectingStrings);
+
+    auto& counter = state.GetInitDataCounter();
+    auto& data_map = state.GetInitDataMap();
+
+    for (std::size_t i = 0; i < operands.Count(); i++) {
+        auto operand_str = operands.Get(i, "index " + std::to_string(i));
+
+        if (operand_str->AsString().empty()) {
+            operand_str->Fail("must be a valid expression or character string");
+        }
+
+        if (operand_str->AsString().front() == '"') {
+            throw std::runtime_error("Character strings are not yet implemented.");
+        } else {
+            // handle expression
+            auto value_operand = operands.GetExpression(i, "index " + std::to_string(i));
+            // TODO: set operand size requirements on value_operand here
+            //   so that when the expr is resolved in the second pass, an error can be thrown
+            //   if the result fails to meet the context requirements.
+
+            data_map[counter] = { Size, IsSigned };
+
+            auto second_pass = std::make_unique<SecondPassAction>(
+                [
+                    counter,
+                    in_vsect = state.in_vsect,
+                    is_remote = state.in_remote_vsect
+                ](AssemblyState& s, const ExpressionOperand& value_operand) {
+                    ExpressionResolver resolver(s);
+                    auto value = value_operand.Resolve(resolver);
+
+                    auto& result_buffer = !in_vsect
+                        ? s.result->code
+                        : is_remote
+                            ? s.result->remote_initialized_data
+                            : s.result->initialized_data;
+
+                    // Note:
+                    //   failure of this assertion may be called a "phasing error" in the official toolchain.
+                    //   So far, this seems like an invariant, but perhaps we'll find a situation in which
+                    //   it's expected, as more operations are implemented.
+                    assert(result_buffer.size() == counter);
+
+                    result_buffer.emplace_back(value);
+                },
+                std::move(value_operand)
+            );
+
+            state.DeferToSecondPass(std::move(second_pass));
+
+            counter += Size;
+        }
+    }
+
+}
+
 /**
  * Ultra C Usage Guide:
  *
@@ -205,12 +321,12 @@ std::unordered_map<std::string, PseudoInstFunc> pseudo_instructions = {
     { "align", Op_Align },
     { "com",   Op_Unimplemented },
 
-    { "dc.b",  Op_Unimplemented },
-    { "dc.sb", Op_Unimplemented },
-    { "dc.w",  Op_Unimplemented },
-    { "dc.sw", Op_Unimplemented },
-    { "dc.l",  Op_Unimplemented },
-    { "dc.sl", Op_Unimplemented },
+    { "dc.b",  Op_DC<1, false> },
+    { "dc.sb", Op_DC<1, true> },
+    { "dc.w",  Op_DC<2, false> },
+    { "dc.sw", Op_DC<2, true> },
+    { "dc.l",  Op_DC<4, false> },
+    { "dc.sl", Op_DC<4, true> },
 
     { "do.b",  Op_Unimplemented },
     { "do.sb", Op_Unimplemented },
