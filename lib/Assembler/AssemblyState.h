@@ -28,12 +28,21 @@ private:
         return *expr_operands.emplace_back(std::move(operand));
     }
 
+    template <typename F, typename ...T>
+    void InitAction(F action, const T& ...ops) {
+        _action = [action, &ops...](AssemblyState& state) {
+            action(state, ops...);
+        };
+    }
+
 public:
     template <typename F, typename ...T>
-    explicit SecondPassAction(F action, std::unique_ptr<T> ...operands) {
-        _action = [this, action, &operands...](AssemblyState& state) {
-            action(state, this->Accept(std::move(operands))...);
-        };
+    explicit SecondPassAction(F action, std::unique_ptr<T> ...ops) {
+        // Note that Accept has a side effect. It moves the op ptr into this class,
+        // saving it into the relevant vector (depending on if it's an Operand
+        // or an ExpressionOperand).
+        // A reference to the op is then forwarded into Init.
+        InitAction(action, this->Accept(std::move(ops))...);
     }
 
     void operator()(AssemblyState& state) {
