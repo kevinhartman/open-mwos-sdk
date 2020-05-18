@@ -1,4 +1,4 @@
-#include "AssemblerTarget.h"
+#include "AssemblerOperationHandler.h"
 #include "Endian.h"
 
 #include <cstdint>
@@ -11,9 +11,9 @@ class MipsAssemblerTarget : public AssemblerTarget {
 public:
     explicit MipsAssemblerTarget(support::Endian);
     ~MipsAssemblerTarget() override;
-    Instruction EmitInstruction(const Entry&) override;
-    void SetTargetSpecificProperties(object::ObjectFile&) override;
 
+    void SetTargetSpecificProperties(object::ObjectFile&) override;
+    std::unique_ptr<AssemblerOperationHandler> GetOperationHandler() override;
 private:
     support::Endian endianness;
 };

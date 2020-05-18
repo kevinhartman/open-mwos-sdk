@@ -68,6 +68,26 @@ struct DataDefinition {
     bool is_signed = false;
 };
 
+// TODO: make these generic to not just instructions
+struct ExpressionMapping {
+    size_t offset;
+    size_t bit_count;
+    std::shared_ptr<expression::Expression> expression;
+};
+
+// TODO: make these generic to not just instructions
+struct Instruction {
+    union {
+        uint8_t raw[sizeof(uint64_t)];
+        uint64_t u64;
+        uint32_t u32;
+        uint16_t u16;
+        uint8_t u8;
+    } data;
+    size_t size;
+    std::vector<ExpressionMapping> expr_mappings;
+};
+
 //struct EquDefinition {
 //    std::unique_ptr<expression::Expression> value;
 //};

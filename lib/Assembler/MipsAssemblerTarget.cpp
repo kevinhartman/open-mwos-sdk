@@ -391,23 +391,34 @@ std::unordered_map<std::string, ParseFunc> instructions_fn = {
 };
 }
 
+class MipsOperationHandler : public AssemblerOperationHandler {
+    bool Handle(const Entry& entry, AssemblyState& state) override {
+        auto handler_kv = instructions_fn.find(entry.operation.value());
+        if (handler_kv != instructions_fn.end()) {
+            auto instruction = handler_kv->second(entry);
+            auto instruction_size = instruction.size;
+
+            // Add instruction to code section.
+            state.psect.code[state.result->counter.code] = std::move(instruction);
+            state.result->counter.code += instruction_size;
+
+            return true;
+        }
+
+        return false;
+    }
+};
+
+std::unique_ptr<AssemblerOperationHandler> MipsAssemblerTarget::GetOperationHandler() {
+    return std::make_unique<MipsOperationHandler>();
+}
+
 MipsAssemblerTarget::MipsAssemblerTarget(support::Endian endianness) : endianness(endianness) { };
 MipsAssemblerTarget::~MipsAssemblerTarget() = default;
 
 void MipsAssemblerTarget::SetTargetSpecificProperties(object::ObjectFile& object_file) {
     object_file.cpu_target = object::CpuTarget::os9k_mips;
     object_file.endian = endianness;
-}
-
-Instruction MipsAssemblerTarget::EmitInstruction(const Entry& entry) {
-    // TODO: return proper error for missing instruction.
-    auto instruction = instructions_fn[entry.operation.value()](entry);
-
-    if (endianness != support::HostEndian) {
-        support::EndianSwap(&instruction.data.u32);
-    }
-
-    return instruction;
 }
 
 }

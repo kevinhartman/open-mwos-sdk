@@ -47,7 +47,7 @@ namespace assembler {
         size_t count;
 
         // TODO: use host endian (default is little for CS_MODE)
-        if (cs_open(CS_ARCH_MIPS, static_cast<cs_mode>(CS_MODE_MIPS32 | CS_MODE_MIPS2 | CS_MODE_BIG_ENDIAN), &handle) != CS_ERR_OK)
+        if (cs_open(CS_ARCH_MIPS, static_cast<cs_mode>(CS_MODE_MIPS32 | CS_MODE_MIPS2 | CS_MODE_LITTLE_ENDIAN), &handle) != CS_ERR_OK)
             throw "Couldn't open Capstone MIPS decoder.";
 
         count = cs_disasm(handle, reinterpret_cast<uint8_t*>(&instruction), sizeof(instruction), 0x1000, 0, &insn);
@@ -84,7 +84,9 @@ namespace assembler {
                 MipsAssemblerTarget target(support::Endian::big);
 
                 THEN("the expression tree is correct") {
-                    auto encoded = target.EmitInstruction(pair.input_instruction);
+                    AssemblyState state {};
+                    REQUIRE(target.GetOperationHandler()->Handle(pair.input_instruction, state));
+                    auto encoded = state.psect.code[0];
                     REQUIRE(encoded.size == 4);
 
                     auto capstone_result = DecodeWithCapstone(static_cast<uint32_t>(encoded.data.u32));

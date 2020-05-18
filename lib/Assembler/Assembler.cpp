@@ -107,12 +107,7 @@ std::unique_ptr<object::ObjectFile> Assembler::Process(const std::vector<Entry> 
                     throw "target instruction must be inside the psect";
                 }
 
-                auto instruction = target->EmitInstruction(entry);
-                auto instruction_size = instruction.size;
-
-                // Add instruction to code section.
-                state.psect.code[state.result->counter.code] = std::move(instruction);
-                state.result->counter.code += instruction_size;
+                target->GetOperationHandler()->Handle(entry, state);
             }
         } else {
             if (entry.label) {

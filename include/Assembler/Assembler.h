@@ -25,8 +25,6 @@ public:
     std::unique_ptr<object::ObjectFile> Process(const std::vector<Entry>& listing);
 
 protected:
-    bool HandleDirective(const Entry& entry, AssemblyState& state);
-    bool HandlePseudoInstruction(const Entry& entry, AssemblyState& state);
     std::unique_ptr<object::ObjectFile> CreateResult(AssemblyState& state);
 
 private:

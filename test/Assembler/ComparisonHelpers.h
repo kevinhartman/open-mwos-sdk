@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Expression.h>
-#include <AssemblerTarget.h>
+#include <AssemblyState.h>
 #include <ObjectFile.h>
 
 namespace expression {
