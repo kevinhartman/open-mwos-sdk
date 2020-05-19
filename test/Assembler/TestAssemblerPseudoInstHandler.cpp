@@ -156,7 +156,10 @@ SCENARIO("DC operation behavior", "[assembler]") {
                 (*action)(state);
             }
 
-            REQUIRE(state.result->code == std::vector<uint8_t>{ 1, 6, 1 });
+            REQUIRE(state.psect.code_data[0].data.u8 == 1);
+            REQUIRE(state.psect.code_data[1].data.u8 == 6);
+            REQUIRE(state.psect.code_data[2].data.u8 == 1);
+
             //REQUIRE(state.GetSymbol("var") == object::SymbolInfo { object::SymbolInfo::Type::UninitData, false, 0 });
         }
 
@@ -180,7 +183,9 @@ SCENARIO("DC operation behavior", "[assembler]") {
                 (*action)(state);
             }
 
-            REQUIRE(state.result->initialized_data == std::vector<uint8_t>{ 1, 6, 1 });
+            REQUIRE(state.psect.initialized_data[0].data.u8 == 1);
+            REQUIRE(state.psect.initialized_data[1].data.u8 == 6);
+            REQUIRE(state.psect.initialized_data[2].data.u8 == 1);
             //REQUIRE(state.GetSymbol("var") == object::SymbolInfo { object::SymbolInfo::Type::UninitData, false, 0 });
         }
 
@@ -205,7 +210,9 @@ SCENARIO("DC operation behavior", "[assembler]") {
                 (*action)(state);
             }
 
-            REQUIRE(state.result->remote_initialized_data == std::vector<uint8_t>{ 1, 6, 1 });
+            REQUIRE(state.psect.remote_initialized_data[0].data.u8 == 1);
+            REQUIRE(state.psect.remote_initialized_data[1].data.u8 == 6);
+            REQUIRE(state.psect.remote_initialized_data[2].data.u8 == 1);
             //REQUIRE(state.GetSymbol("var") == object::SymbolInfo { object::SymbolInfo::Type::UninitData, false, 0 });
         }
     }
@@ -232,7 +239,9 @@ SCENARIO("DC operation behavior", "[assembler]") {
                 (*action)(state);
             }
 
-            REQUIRE(state.result->code == std::vector<uint8_t>{ 1, 6, 1 });
+            REQUIRE(state.psect.code_data[0].data.u16 == 1);
+            REQUIRE(state.psect.code_data[2].data.u16 == 6);
+            REQUIRE(state.psect.code_data[4].data.u16 == 1);
             //REQUIRE(state.GetSymbol("var") == object::SymbolInfo { object::SymbolInfo::Type::UninitData, false, 0 });
         }
 
@@ -256,7 +265,9 @@ SCENARIO("DC operation behavior", "[assembler]") {
                 (*action)(state);
             }
 
-            REQUIRE(state.result->initialized_data == std::vector<uint8_t>{ 1, 6, 1 });
+            REQUIRE(state.psect.initialized_data[0].data.u16 == 1);
+            REQUIRE(state.psect.initialized_data[2].data.u16 == 6);
+            REQUIRE(state.psect.initialized_data[4].data.u16 == 1);
             //REQUIRE(state.GetSymbol("var") == object::SymbolInfo { object::SymbolInfo::Type::UninitData, false, 0 });
         }
 
@@ -281,7 +292,9 @@ SCENARIO("DC operation behavior", "[assembler]") {
                 (*action)(state);
             }
 
-            REQUIRE(state.result->remote_initialized_data == std::vector<uint8_t>{ 1, 6, 1 });
+            REQUIRE(state.psect.remote_initialized_data[0].data.u16 == 1);
+            REQUIRE(state.psect.remote_initialized_data[2].data.u16 == 6);
+            REQUIRE(state.psect.remote_initialized_data[4].data.u16 == 1);
             //REQUIRE(state.GetSymbol("var") == object::SymbolInfo { object::SymbolInfo::Type::UninitData, false, 0 });
         }
     }

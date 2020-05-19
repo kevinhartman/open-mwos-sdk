@@ -86,7 +86,7 @@ namespace assembler {
                 THEN("the expression tree is correct") {
                     AssemblyState state {};
                     REQUIRE(target.GetOperationHandler()->Handle(pair.input_instruction, state));
-                    auto encoded = state.psect.code[0];
+                    auto encoded = state.psect.code_data[0];
                     REQUIRE(encoded.size == 4);
 
                     auto capstone_result = DecodeWithCapstone(static_cast<uint32_t>(encoded.data.u32));

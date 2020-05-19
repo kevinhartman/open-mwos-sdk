@@ -108,10 +108,6 @@ struct ObjectFile {
         size_t remote_uninitialized_data;
     } counter;
 
-    std::vector<uint8_t> code {};
-    std::vector<uint8_t> initialized_data {};
-    std::vector<uint8_t> remote_initialized_data {};
-
     std::map<std::string, SymbolInfo> global_symbols {};
     std::map<std::string, SymbolInfo> local_symbols {};
 };

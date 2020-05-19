@@ -14,6 +14,7 @@
 
 #include <sstream>
 #include <variant>
+#include <AssemblyState.h>
 
 namespace assembler {
 
@@ -102,30 +103,24 @@ void Op_DC(std::unique_ptr<Operation> operation, AssemblyState& state) {
             //   so that when the expr is resolved in the second pass, an error can be thrown
             //   if the result fails to meet the context requirements.
 
-            data_map[counter] = { Size, IsSigned };
+            MemoryValue v {};
+            v.data.u32 = 0;
+            v.size = Size;
+            v.is_signed = IsSigned;
+
+            data_map[counter] = std::move(v);
 
             auto second_pass = std::make_unique<SecondPassAction>(
-                [
-                    counter,
-                    in_vsect = state.in_vsect,
-                    is_remote = state.in_remote_vsect
-                ](AssemblyState& s, const ExpressionOperand& value_operand) {
+                [&field = data_map[counter]](AssemblyState& s, const ExpressionOperand& value_operand) {
                     ExpressionResolver resolver(s);
-                    auto value = value_operand.Resolve(resolver);
 
-                    auto& result_buffer = !in_vsect
-                        ? s.result->code
-                        : is_remote
-                            ? s.result->remote_initialized_data
-                            : s.result->initialized_data;
-
-                    // Note:
-                    //   failure of this assertion may be called a "phasing error" in the official toolchain.
-                    //   So far, this seems like an invariant, but perhaps we'll find a situation in which
-                    //   it's expected, as more operations are implemented.
-                    assert(result_buffer.size() == counter);
-
-                    result_buffer.emplace_back(value);
+                    try {
+                        auto value = value_operand.Resolve(resolver);
+                        field.data.u32 = value;
+                    } catch (OperandException& e) {
+                        // Expression has external references.
+                        field.expr_mappings = { ExpressionMapping {0,Size }};
+                    }
                 },
                 std::move(value_operand)
             );
