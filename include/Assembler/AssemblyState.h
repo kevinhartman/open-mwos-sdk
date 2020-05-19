@@ -83,15 +83,6 @@ struct VSect {
 
 typedef size_t local_offset;
 struct PSect {
-    std::string name;
-    std::unique_ptr<ExpressionOperand>
-        tylan,
-        revision,
-        edition,
-        stack,
-        entry_offset,
-        trap_handler_offset;
-
     std::vector<VSect> vsects {};
 
     std::map<local_offset, MemoryValue> initialized_data {};

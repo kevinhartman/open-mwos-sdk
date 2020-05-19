@@ -139,59 +139,53 @@ void Op_Psect(std::unique_ptr<Operation> operation, AssemblyState& state) {
         operation->Fail(OperationException::Code::TooManyOperands, "must have <=7 operands");
     }
 
-    bool default_mode = true;
+    // Default values
+    state.result->name = "program";
+    state.result->trap_handler_offset = 0xFFFFFFFF; // Appears to be -1, not 0
+
     if (operands.Count() != 0) {
         // Params must be fully specified if any are specified.
-        default_mode = false;
 
-        auto& p_sect = state.psect;
-
-        // TODO: validation
+        // TODO: name validation
         // > Any printable character may be used except a space or comma.
         // > However, the name must begin with a non-numeric character.
-        p_sect.name = operands.Get(0, "name")->AsString();
+        state.result->name = operands.Get(0, "name")->AsString();
 
-        p_sect.tylan = operands.GetExpression(1, "typelang");
-        p_sect.revision = operands.GetExpression(2, "attrev");
-        p_sect.edition = operands.GetExpression(3, "edition");
-        p_sect.stack = operands.GetExpression(4, "stacksize");
-        p_sect.entry_offset = operands.GetExpression(5, "entrypt");
+        state.DeferToSecondPass(std::make_unique<SecondPassAction>(
+            [](
+                AssemblyState& state,
+                const ExpressionOperand& tylan,
+                const ExpressionOperand& attrev,
+                const ExpressionOperand& edition,
+                const ExpressionOperand& stack,
+                const ExpressionOperand& entrypt
+            ) {
+                auto& result = *state.result;
+
+                ExpressionResolver resolver(state);
+                result.tylan = tylan.Resolve(resolver);
+                result.revision = attrev.Resolve(resolver);
+                result.edition = edition.Resolve(resolver);
+                result.stack_size = stack.Resolve(resolver);
+                result.entry_offset = entrypt.Resolve(resolver);
+            },
+            operands.GetExpression(1, "typelang"),
+            operands.GetExpression(2, "attrev"),
+            operands.GetExpression(3, "edition"),
+            operands.GetExpression(4, "stacksize"),
+            operands.GetExpression(5, "entrypt")
+        ));
 
         if (operands.Count() == 7) {
-            p_sect.trap_handler_offset = operands.GetExpression(6, "trapent");
+            state.DeferToSecondPass(std::make_unique<SecondPassAction>(
+                [](AssemblyState& state, const ExpressionOperand& trapent) {
+                    ExpressionResolver resolver(state);
+                    state.result->trap_handler_offset = trapent.Resolve(resolver);
+                },
+                operands.GetExpression(6, "trapent")
+            ));
         }
     }
-
-    auto second_pass = std::make_unique<SecondPassAction>(
-        [default_mode, &p_sect = state.psect](AssemblyState& state) {
-            // TODO: remove state parameter. Note the RHS exprs are using p_sect from capture
-
-            auto& result = *state.result;
-
-            ExpressionResolver resolver(state);
-            auto get = [default_mode, &resolver](ExpressionOperand& operand) {
-                return default_mode ? 0 : operand.Resolve(resolver);
-            };
-
-            result.name = default_mode ? "program" : p_sect.name;
-            result.tylan = get(*p_sect.tylan);
-            result.revision = get(*p_sect.revision);
-            result.edition = get(*p_sect.edition);
-            result.stack_size = get(*p_sect.stack);
-            result.entry_offset = get(*p_sect.entry_offset);
-
-            // Note: docs say non-specified for *all* should default to 0, but examining
-            // trapent it appears to be max int.
-            // TODO: this isn't very clean.
-            result.trap_handler_offset = default_mode
-                ? 0xFFFFFFFF
-                : p_sect.trap_handler_offset
-                    ? p_sect.trap_handler_offset->Resolve(resolver)
-                    : 0xFFFFFFFF;
-        }
-    );
-
-    state.DeferToSecondPass(std::move(second_pass));
 }
 
 void Op_Vsect(std::unique_ptr<Operation> operation, AssemblyState& state) {
