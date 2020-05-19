@@ -10,10 +10,7 @@ namespace expression {
 std::ostream &operator<<(std::ostream &os, const Expression &expr);
 }
 
-namespace assembler {
-std::ostream &operator<<(std::ostream &os, const ExpressionMapping &expr);
-}
-
 namespace object {
+std::ostream &operator<<(std::ostream &os, const ExpressionMapping &expr);
 std::ostream &operator<<(std::ostream &os, const SymbolInfo &sym);
 }

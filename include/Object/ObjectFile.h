@@ -56,12 +56,6 @@ enum class CpuTarget {
     os9k_sh4a
 };
 
-struct Data {
-    size_t size;
-    bool is_signed = false;
-    std::variant<std::string, std::unique_ptr<expression::Expression>> value;
-};
-
 struct VSect {
     bool isRemote;
 };
@@ -81,6 +75,44 @@ struct SymbolInfo {
 
     // Will be nullopt for equ and set
     std::optional<uint32_t> value;
+};
+
+struct ExpressionMapping {
+    size_t offset;
+    size_t bit_count;
+    std::shared_ptr<expression::Expression> expression;
+};
+
+struct MemoryValue {
+    union {
+        uint8_t raw[sizeof(uint64_t)];
+        uint64_t u64;
+        uint32_t u32;
+        uint16_t u16;
+        uint8_t u8;
+    } data {};
+    size_t size {};
+    bool is_signed {};
+    std::vector<ExpressionMapping> expr_mappings {};
+};
+
+//struct EquDefinition {
+//    std::unique_ptr<expression::Expression> value;
+//};
+
+struct SetDefinition {
+    std::unique_ptr<expression::Expression> value;
+};
+
+typedef size_t local_offset;
+struct PSect {
+    std::vector<VSect> vsects {};
+
+    std::map<local_offset, MemoryValue> initialized_data {};
+    std::map<local_offset, MemoryValue> remote_initialized_data {};
+    std::map<local_offset, MemoryValue> code_data {};
+
+    std::map<std::string, object::SymbolInfo> symbols {};
 };
 
 struct ObjectFile {
@@ -107,6 +139,9 @@ struct ObjectFile {
         size_t remote_initialized_data;
         size_t remote_uninitialized_data;
     } counter;
+
+    PSect psect {};
+    std::vector<VSect> root_vsects {};
 
     std::map<std::string, SymbolInfo> global_symbols {};
     std::map<std::string, SymbolInfo> local_symbols {};

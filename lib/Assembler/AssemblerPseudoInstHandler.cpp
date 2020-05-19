@@ -103,7 +103,7 @@ void Op_DC(std::unique_ptr<Operation> operation, AssemblyState& state) {
             //   so that when the expr is resolved in the second pass, an error can be thrown
             //   if the result fails to meet the context requirements.
 
-            MemoryValue v {};
+            object::MemoryValue v {};
             v.data.u32 = 0;
             v.size = Size;
             v.is_signed = IsSigned;
@@ -119,7 +119,7 @@ void Op_DC(std::unique_ptr<Operation> operation, AssemblyState& state) {
                         field.data.u32 = value;
                     } catch (OperandException& e) {
                         // Expression has external references.
-                        field.expr_mappings = { ExpressionMapping {0,Size }};
+                        field.expr_mappings = { object::ExpressionMapping {0, Size }};
                     }
                 },
                 std::move(value_operand)

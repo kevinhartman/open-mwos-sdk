@@ -1,6 +1,5 @@
 #include <catch2/catch.hpp>
 
-
 #include <AssemblerPseudoInstHandler.h>
 
 #include <Assembler.h>
@@ -81,7 +80,7 @@ SCENARIO("DS operation expression resolution behavior", "[assembler]") {
             info.op = "equ";
             info.operand = "5+2";
 
-            state.psect.equs["constequ"] = std::make_unique<ExpressionOperand>(info);
+            state.equs["constequ"] = std::make_unique<ExpressionOperand>(info);
 
             auto entry = ParseEntry("var ds.b constequ+1");
             REQUIRE(handler.Handle(entry, state));
@@ -93,7 +92,7 @@ SCENARIO("DS operation expression resolution behavior", "[assembler]") {
             info.op = "equ";
             info.operand = "5+extern";
 
-            state.psect.equs["equ"] = std::make_unique<ExpressionOperand>(info);
+            state.equs["equ"] = std::make_unique<ExpressionOperand>(info);
 
             auto entry = ParseEntry("var ds.b equ+1");
             REQUIRE_THROWS_AS(handler.Handle(entry, state), OperandException);
@@ -141,7 +140,7 @@ SCENARIO("DC operation behavior", "[assembler]") {
             AssemblyState state {};
             state.in_psect = true;
 
-            auto& data_map = state.psect.code_data;
+            auto& data_map = state.result->psect.code_data;
 
             REQUIRE(handler.Handle(entry, state));
             REQUIRE(state.result->counter.code == 3);
@@ -156,9 +155,9 @@ SCENARIO("DC operation behavior", "[assembler]") {
                 (*action)(state);
             }
 
-            REQUIRE(state.psect.code_data[0].data.u8 == 1);
-            REQUIRE(state.psect.code_data[1].data.u8 == 6);
-            REQUIRE(state.psect.code_data[2].data.u8 == 1);
+            REQUIRE(state.result->psect.code_data[0].data.u8 == 1);
+            REQUIRE(state.result->psect.code_data[1].data.u8 == 6);
+            REQUIRE(state.result->psect.code_data[2].data.u8 == 1);
 
             //REQUIRE(state.GetSymbol("var") == object::SymbolInfo { object::SymbolInfo::Type::UninitData, false, 0 });
         }
@@ -168,7 +167,7 @@ SCENARIO("DC operation behavior", "[assembler]") {
             state.in_psect = true;
             state.in_vsect = true;
 
-            auto& data_map = state.psect.initialized_data;
+            auto& data_map = state.result->psect.initialized_data;
 
             REQUIRE(handler.Handle(entry, state));
             REQUIRE(state.result->counter.initialized_data == 3);
@@ -183,9 +182,9 @@ SCENARIO("DC operation behavior", "[assembler]") {
                 (*action)(state);
             }
 
-            REQUIRE(state.psect.initialized_data[0].data.u8 == 1);
-            REQUIRE(state.psect.initialized_data[1].data.u8 == 6);
-            REQUIRE(state.psect.initialized_data[2].data.u8 == 1);
+            REQUIRE(state.result->psect.initialized_data[0].data.u8 == 1);
+            REQUIRE(state.result->psect.initialized_data[1].data.u8 == 6);
+            REQUIRE(state.result->psect.initialized_data[2].data.u8 == 1);
             //REQUIRE(state.GetSymbol("var") == object::SymbolInfo { object::SymbolInfo::Type::UninitData, false, 0 });
         }
 
@@ -195,7 +194,7 @@ SCENARIO("DC operation behavior", "[assembler]") {
             state.in_vsect = true;
             state.in_remote_vsect = true;
 
-            auto& data_map = state.psect.remote_initialized_data;
+            auto& data_map = state.result->psect.remote_initialized_data;
 
             REQUIRE(handler.Handle(entry, state));
             REQUIRE(state.result->counter.remote_initialized_data == 3);
@@ -210,9 +209,9 @@ SCENARIO("DC operation behavior", "[assembler]") {
                 (*action)(state);
             }
 
-            REQUIRE(state.psect.remote_initialized_data[0].data.u8 == 1);
-            REQUIRE(state.psect.remote_initialized_data[1].data.u8 == 6);
-            REQUIRE(state.psect.remote_initialized_data[2].data.u8 == 1);
+            REQUIRE(state.result->psect.remote_initialized_data[0].data.u8 == 1);
+            REQUIRE(state.result->psect.remote_initialized_data[1].data.u8 == 6);
+            REQUIRE(state.result->psect.remote_initialized_data[2].data.u8 == 1);
             //REQUIRE(state.GetSymbol("var") == object::SymbolInfo { object::SymbolInfo::Type::UninitData, false, 0 });
         }
     }
@@ -224,7 +223,7 @@ SCENARIO("DC operation behavior", "[assembler]") {
             AssemblyState state {};
             state.in_psect = true;
 
-            auto& data_map = state.psect.code_data;
+            auto& data_map = state.result->psect.code_data;
 
             REQUIRE(handler.Handle(entry, state));
             REQUIRE(state.result->counter.code == 6);
@@ -239,9 +238,9 @@ SCENARIO("DC operation behavior", "[assembler]") {
                 (*action)(state);
             }
 
-            REQUIRE(state.psect.code_data[0].data.u16 == 1);
-            REQUIRE(state.psect.code_data[2].data.u16 == 6);
-            REQUIRE(state.psect.code_data[4].data.u16 == 1);
+            REQUIRE(state.result->psect.code_data[0].data.u16 == 1);
+            REQUIRE(state.result->psect.code_data[2].data.u16 == 6);
+            REQUIRE(state.result->psect.code_data[4].data.u16 == 1);
             //REQUIRE(state.GetSymbol("var") == object::SymbolInfo { object::SymbolInfo::Type::UninitData, false, 0 });
         }
 
@@ -250,7 +249,7 @@ SCENARIO("DC operation behavior", "[assembler]") {
             state.in_psect = true;
             state.in_vsect = true;
 
-            auto& data_map = state.psect.initialized_data;
+            auto& data_map = state.result->psect.initialized_data;
 
             REQUIRE(handler.Handle(entry, state));
             REQUIRE(state.result->counter.initialized_data == 6);
@@ -265,9 +264,9 @@ SCENARIO("DC operation behavior", "[assembler]") {
                 (*action)(state);
             }
 
-            REQUIRE(state.psect.initialized_data[0].data.u16 == 1);
-            REQUIRE(state.psect.initialized_data[2].data.u16 == 6);
-            REQUIRE(state.psect.initialized_data[4].data.u16 == 1);
+            REQUIRE(state.result->psect.initialized_data[0].data.u16 == 1);
+            REQUIRE(state.result->psect.initialized_data[2].data.u16 == 6);
+            REQUIRE(state.result->psect.initialized_data[4].data.u16 == 1);
             //REQUIRE(state.GetSymbol("var") == object::SymbolInfo { object::SymbolInfo::Type::UninitData, false, 0 });
         }
 
@@ -277,7 +276,7 @@ SCENARIO("DC operation behavior", "[assembler]") {
             state.in_vsect = true;
             state.in_remote_vsect = true;
 
-            auto& data_map = state.psect.remote_initialized_data;
+            auto& data_map = state.result->psect.remote_initialized_data;
 
             REQUIRE(handler.Handle(entry, state));
             REQUIRE(state.result->counter.remote_initialized_data == 6);
@@ -292,9 +291,9 @@ SCENARIO("DC operation behavior", "[assembler]") {
                 (*action)(state);
             }
 
-            REQUIRE(state.psect.remote_initialized_data[0].data.u16 == 1);
-            REQUIRE(state.psect.remote_initialized_data[2].data.u16 == 6);
-            REQUIRE(state.psect.remote_initialized_data[4].data.u16 == 1);
+            REQUIRE(state.result->psect.remote_initialized_data[0].data.u16 == 1);
+            REQUIRE(state.result->psect.remote_initialized_data[2].data.u16 == 6);
+            REQUIRE(state.result->psect.remote_initialized_data[4].data.u16 == 1);
             //REQUIRE(state.GetSymbol("var") == object::SymbolInfo { object::SymbolInfo::Type::UninitData, false, 0 });
         }
     }

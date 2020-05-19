@@ -50,50 +50,6 @@ public:
     }
 };
 
-struct ExpressionMapping {
-    size_t offset;
-    size_t bit_count;
-    std::shared_ptr<expression::Expression> expression;
-};
-
-struct MemoryValue {
-    union {
-        uint8_t raw[sizeof(uint64_t)];
-        uint64_t u64;
-        uint32_t u32;
-        uint16_t u16;
-        uint8_t u8;
-    } data {};
-    size_t size {};
-    bool is_signed {};
-    std::vector<ExpressionMapping> expr_mappings {};
-};
-
-//struct EquDefinition {
-//    std::unique_ptr<expression::Expression> value;
-//};
-
-struct SetDefinition {
-    std::unique_ptr<expression::Expression> value;
-};
-
-struct VSect {
-    bool isRemote;
-};
-
-typedef size_t local_offset;
-struct PSect {
-    std::vector<VSect> vsects {};
-
-    std::map<local_offset, MemoryValue> initialized_data {};
-    std::map<local_offset, MemoryValue> remote_initialized_data {};
-    std::map<local_offset, MemoryValue> code_data {};
-
-    std::map<std::string, object::SymbolInfo> symbols {};
-
-    std::map<std::string, std::unique_ptr<ExpressionOperand>> equs {};
-};
-
 struct AssemblyState {
 
     inline auto& GetInitDataCounter() {
@@ -106,10 +62,10 @@ struct AssemblyState {
 
     inline auto& GetInitDataMap() {
         return !in_vsect
-            ? psect.code_data
+            ? result->psect.code_data
             : in_remote_vsect
-                ? psect.remote_initialized_data
-                : psect.initialized_data;
+                ? result->psect.remote_initialized_data
+                : result->psect.initialized_data;
     }
 
     void DeferToSecondPass(std::unique_ptr<SecondPassAction> action) {
@@ -117,8 +73,8 @@ struct AssemblyState {
     }
 
     inline std::optional<object::SymbolInfo> GetSymbol(std::string name) const {
-        auto symbol_itr = psect.symbols.find(name);
-        if (symbol_itr != psect.symbols.end()) {
+        auto symbol_itr = result->psect.symbols.find(name);
+        if (symbol_itr != result->psect.symbols.end()) {
             return symbol_itr->second;
         }
 
@@ -127,7 +83,7 @@ struct AssemblyState {
 
     inline void UpdateSymbol(const Label& label, const object::SymbolInfo& symbol_info) {
         symbol_name_to_label[label.name] = label;
-        psect.symbols[label.name] = symbol_info;
+        result->psect.symbols[label.name] = symbol_info;
     }
 
     bool found_program_end = false;
@@ -139,8 +95,7 @@ struct AssemblyState {
     std::vector<Label> pending_labels {};
     std::map<std::string, Label> symbol_name_to_label;
 
-    PSect psect {};
-    std::vector<VSect> root_vsects {};
+    std::map<std::string, std::unique_ptr<ExpressionOperand>> equs {};
 
     // TODO: this design raises a few interesting considerations. For example:
     //   - Counter values (probably among other things) should only be allowed to be manipulated in the first pass.

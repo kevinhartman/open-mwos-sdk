@@ -111,15 +111,12 @@ std::ostream& operator<<(std::ostream& os, const Expression& expr) {
 
 }
 
-namespace assembler {
+namespace object {
 std::ostream &operator<<(std::ostream &os, const ExpressionMapping &expr) {
     os << "{ offset: " << expr.offset << " bit_count: " << expr.bit_count << " expression: " << *expr.expression;
     return os;
 }
 
-}
-
-namespace object {
 std::ostream &operator<<(std::ostream &os, const SymbolInfo &sym) {
     os << "{ type: " << sym.type << " is_global: " << sym.is_global << " value: " << sym.value.value() << "{";
     return os;

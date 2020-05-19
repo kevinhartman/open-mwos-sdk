@@ -99,7 +99,7 @@ ExpressionResolver::ExpressionResolver(const AssemblyState& state)
 uint32_t ExpressionResolver::Resolve(const Expression& expression) const {
     ResolverVisitor resolver_visitor ([this, &state = state](const std::string& name)-> uint32_t {
         // TODO: we currently only support EQU. Need to implement references and Set.
-        auto& equs = state.psect.equs;
+        auto& equs = state.equs;
 
         auto equ_expr_kv = equs.find(name);
         if (equ_expr_kv != equs.end()) {

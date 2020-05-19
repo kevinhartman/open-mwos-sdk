@@ -83,7 +83,7 @@ void Op_Equ(std::unique_ptr<Operation> operation, AssemblyState& state) {
     // Create Equ definition.
     // Note: these are for use by expression trees in other operations in this translation unit. We don't need to enqueue
     //       any sort of evaluation for these, since referencing ops will do that.
-    state.psect.equs[name] = std::move(expression_operand);
+    state.equs[name] = std::move(expression_operand);
 
     if (entry.label->is_global) {
         // For a global EQU, we must create an external definition. We do this for now by
@@ -110,13 +110,6 @@ void Op_Equ(std::unique_ptr<Operation> operation, AssemblyState& state) {
     }
 }
 
-/**
- * TODO:
- *   - We currently save psect operands into state.psect.<operand name>, but that
- *     is no longer required since SecondPassAction automatically can hold them instead.
- * @param operation
- * @param state
- */
 void Op_Psect(std::unique_ptr<Operation> operation, AssemblyState& state) {
     if (state.in_psect)
         operation->Fail(OperationException::Code::UnexpectedPSect,
