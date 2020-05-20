@@ -398,6 +398,9 @@ class MipsOperationHandler : public AssemblerOperationHandler {
             auto instruction = handler_kv->second(entry);
             auto instruction_size = instruction.size;
 
+            // Create code symbol with any pending labels.
+            state.CreateSymbol(object::SymbolInfo::Type::Code, state.result->counter.code);
+
             // Add instruction to code section.
             state.result->psect.code_data[state.result->counter.code] = std::move(instruction);
             state.result->counter.code += instruction_size;

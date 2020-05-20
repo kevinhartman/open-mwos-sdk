@@ -87,7 +87,16 @@ struct AssemblyState {
         result->psect.symbols[label.name] = symbol_info;
     }
 
+    /**
+     * Attempt to create a unique symbol using any pending (unbound) labels.
+     *
+     * @param type symbol type to create.
+     * @param counter value to assign to symbol.
+     * @return false if a duplicate symbol already exists. true otherwise.
+     */
     inline bool CreateSymbol(object::SymbolInfo::Type type, std::size_t counter) {
+        if (pending_labels.empty()) return true;
+
         // Consume pending labels here and reinitialize them to empty.
         std::set<Label> labels {};
         std::swap(pending_labels, labels);
