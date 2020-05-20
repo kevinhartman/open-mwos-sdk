@@ -89,6 +89,11 @@ std::unique_ptr<object::ObjectFile> Assembler::Process(const std::vector<Entry> 
             break;
         }
 
+        if (entry.label) {
+            // Remember the label so it can be mapped to the next appropriate counter value.
+            state.pending_labels.insert(entry.label.value());
+        }
+
         if (entry.operation) {
             auto try_handle = [&entry, &state](auto& handler) {
                 return handler->Handle(entry, state);
@@ -108,11 +113,6 @@ std::unique_ptr<object::ObjectFile> Assembler::Process(const std::vector<Entry> 
                 }
 
                 target->GetOperationHandler()->Handle(entry, state);
-            }
-        } else {
-            if (entry.label) {
-                // Remember the label so it can be mapped to the next appropriate counter value.
-                state.pending_labels.emplace_back(entry.label.value());
             }
         }
     }

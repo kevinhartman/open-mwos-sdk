@@ -10,6 +10,7 @@
 #include <map>
 #include <optional>
 #include <vector>
+#include <set>
 
 namespace assembler {
 
@@ -86,13 +87,34 @@ struct AssemblyState {
         result->psect.symbols[label.name] = symbol_info;
     }
 
+    inline bool CreateSymbol(object::SymbolInfo::Type type, std::size_t counter) {
+        // Consume pending labels here and reinitialize them to empty.
+        std::set<Label> labels {};
+        std::swap(pending_labels, labels);
+
+        for (auto& label : labels) {
+            if (GetSymbol(label.name)) {
+                // Duplicate symbol. Don't create.
+                return false;
+            }
+
+            UpdateSymbol(label, object::SymbolInfo {
+                type,
+                label.is_global,
+                counter
+            });
+        }
+
+        return true;
+    }
+
     bool found_program_end = false;
     bool found_psect = false;
 
     bool in_psect = false;
     bool in_vsect = false;
     bool in_remote_vsect = false;
-    std::vector<Label> pending_labels {};
+    std::set<Label> pending_labels {};
     std::map<std::string, Label> symbol_name_to_label;
 
     std::map<std::string, std::unique_ptr<ExpressionOperand>> equs {};

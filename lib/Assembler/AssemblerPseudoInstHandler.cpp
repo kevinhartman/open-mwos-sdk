@@ -191,12 +191,6 @@ void Op_DS(std::unique_ptr<Operation> operation, AssemblyState& state) {
     auto operands = operation->ParseOperands();
     auto count_operand = operands.GetExpression(0, "count");
 
-    // If a label was provided inline, add it to pending labels.
-    auto label_opt = operation->GetEntry().label;
-    if (label_opt) {
-        state.pending_labels.emplace_back(label_opt.value());
-    }
-
     ExpressionResolver resolver(state);
 
     // We need to resolve the size (count) expression *now*, since we must know by how much to increment data counter.
@@ -217,24 +211,9 @@ void Op_DS(std::unique_ptr<Operation> operation, AssemblyState& state) {
         counter = support::RoundToNextPow2Multiple(counter, 2);
     }
 
-    // Consume pending labels here and reinitialize them to empty.
-    std::vector<Label> labels {};
-    std::swap(state.pending_labels, labels);
-
-    for (auto& label : labels) {
-        if (state.GetSymbol(label.name)) {
-            operation->Fail(OperationException::Code::DuplicateSymbol,
-                "label must not be previously defined");
-        }
-
-        state.UpdateSymbol(label, object::SymbolInfo {
-            state.in_remote_vsect
-                ? object::SymbolInfo::Type::RemoteUninitData
-                : object::SymbolInfo::Type::UninitData,
-            label.is_global,
-            counter
-        });
-    }
+    state.CreateSymbol(state.in_remote_vsect
+        ? object::SymbolInfo::Type::RemoteUninitData
+        : object::SymbolInfo::Type::UninitData, counter);
 
     // Advance counter now that labels are mapped.
     counter += increment;

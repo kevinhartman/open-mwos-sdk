@@ -57,7 +57,7 @@ std::string InputFileParser::ParseLabel(const std::string& line, Entry& entry) c
     std::smatch matches{};
     if (std::regex_search(rest, matches, label)) {
         // Label detected
-        Label entry_label;
+        Label entry_label {};
         entry_label.name = matches[0];
         rest = std::regex_replace(rest, label, "");
 
