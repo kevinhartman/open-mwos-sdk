@@ -85,7 +85,7 @@ struct ExpressionMapping {
 
 struct MemoryValue {
     union {
-        uint8_t raw[sizeof(uint64_t)];
+        std::array<uint8_t, sizeof(uint64_t)> raw;
         uint64_t u64;
         uint32_t u32;
         uint16_t u16;

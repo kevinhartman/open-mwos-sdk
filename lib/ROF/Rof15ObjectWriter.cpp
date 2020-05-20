@@ -118,8 +118,28 @@ std::vector<ExternDefinition> GetExternalDefinitions(const object::ObjectFile& o
     return extern_defs;
 }
 
-std::vector<uint32_t> GetCode(const object::ObjectFile& object_file) {
-    return {};
+std::vector<uint8_t> GetCode(const object::ObjectFile& object_file) {
+    auto& code = object_file.psect.code_data;
+
+    std::vector<uint8_t> result {};
+
+    size_t write = 0;
+    for (auto [offset, memory] : code) {
+        // Zero pad any memory not identified in the memory map
+        result.insert(result.end(), offset - write, 0);
+
+        if (object_file.endian != support::HostEndian) {
+            std::reverse(memory.data.raw.begin(), memory.data.raw.begin() + memory.size);
+        }
+
+        result.insert(result.end(), memory.data.raw.begin(), memory.data.raw.end());
+        write = offset + memory.size;
+    }
+
+    // Zero pad any memory after the map, up to the code size
+    result.insert(result.end(), object_file.counter.code - write);
+
+    return result;
 }
 
 std::vector<DataEntry> GetInitializedData(const object::ObjectFile& object_file) {
@@ -164,12 +184,7 @@ void Rof15ObjectWriter::Write(const object::ObjectFile& object_file, std::ostrea
     }
 
     // Write Code Section
-    for (auto instruction : code) {
-        // TODO: currently, the flipping below WILL cause a problem. E.g. Endian is already big coming from MIPS target.
-        //       That means we should either emit host endian in targets, or never flip here (using Endian::ignore).
-        // Note: these instructions will be endian-flipped by serializer
-        serialize(instruction);
-    }
+    serialize(code);
 
     // Write Initialized Data and Initialized Remote Data Sections
     auto serialize_init_data = [&serialize](auto data) {
