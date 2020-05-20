@@ -71,6 +71,10 @@ namespace {
  * Initialized data cannot exist in a VSect that is not nested within a Psect, since counters
  * do not work outside of psects.
  *
+ * TODO:
+ *   - The docs seem to say that we should align both word and long to *even* boundary,
+ *     but IMO it seems more natural to always align to the next 'Size' boundary.
+ *
  * @tparam Size
  * @tparam IsSigned
  * @param operation
@@ -94,6 +98,18 @@ void Op_DC(std::unique_ptr<Operation> operation, AssemblyState& state) {
             operand_str->Fail("must be a valid expression or character string");
         }
 
+        // Align to the next "Size" boundary.
+        if constexpr (Size > 1) {
+            counter = support::RoundToNextPow2Multiple(counter, Size);
+        }
+
+        if (i == 0) {
+            // Create symbol from labels at the first field
+            state.CreateSymbol(state.in_remote_vsect
+                ? object::SymbolInfo::Type::RemoteInitData
+                : object::SymbolInfo::Type::InitData, counter);
+        }
+
         if (operand_str->AsString().front() == '"') {
             throw std::runtime_error("Character strings are not yet implemented.");
         } else {
@@ -102,6 +118,8 @@ void Op_DC(std::unique_ptr<Operation> operation, AssemblyState& state) {
             // TODO: set operand size requirements on value_operand here
             //   so that when the expr is resolved in the second pass, an error can be thrown
             //   if the result fails to meet the context requirements.
+            //   ** note: this should happen automatically in the case of an expr with extern refs,
+            //            which the linker will handle (using ref bitfield info).
 
             object::MemoryValue v {};
             v.data.u32 = 0;
