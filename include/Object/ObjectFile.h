@@ -117,7 +117,6 @@ struct PSect {
 
 struct ObjectFile {
     uint16_t assembler_version;
-    uint64_t assembly_time_epoch;
     std::time_t assembly_time;
 
     std::string name;

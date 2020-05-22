@@ -20,7 +20,6 @@ SCENARIO("ROF header is written correctly", "[serializer][rof]") {
 
         object_file.revision = 1;
         object_file.assembler_version = 23;
-        object_file.assembly_time_epoch = 0;
         object_file.cpu_target = object::CpuTarget::os9k_mips;
         object_file.edition = 2;
         object_file.stack_size = 4096;
