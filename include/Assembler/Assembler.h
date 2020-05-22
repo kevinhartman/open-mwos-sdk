@@ -25,7 +25,7 @@ public:
     std::unique_ptr<object::ObjectFile> Process(const std::vector<Entry>& listing);
 
 protected:
-    std::unique_ptr<object::ObjectFile> CreateResult(AssemblyState& state);
+    void CreateResult(AssemblyState& state);
 
 private:
     uint16_t assembler_version;

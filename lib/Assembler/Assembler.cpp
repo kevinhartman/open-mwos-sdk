@@ -5,68 +5,26 @@
 #include "AssemblerTarget.h"
 #include "AssemblyState.h"
 #include "ExpressionResolver.h"
-#include "Numeric.h"
 #include "ObjectFile.h"
 
 #include <chrono>
-#include <limits>
 #include <vector>
 
 namespace assembler {
 
-namespace {
+void Assembler::CreateResult(AssemblyState& state) {
+    // Invoke second pass.
+    for (auto& action : state.second_pass_queue2) {
+        (*action)(state);
+    }
 
-    // TODO: currently, PSect will contain straight up unresolved expressions.
-    //   That's why we need to resolve these values after processing the TU.
-    //   Without thinking, I moved PSect to object::ObjectFile, but that might've
-    //   been a mistake, since perhaps unresolved expressions should not leave
-    //   the assembler except for serialization. I need to think through that
-    //   abstraction.
-    //
-    //   Update: for now, the approach will be to keep those unresolved expressions
-    //   inside object::ObjectFile, but we will resolve them here too.
-void SetObjectInfo(const AssemblyState& state, object::ObjectFile& object) {
-//    const auto& psect = state.psect;
-//
-//    const auto expr_16bit = [](std::string name, auto value) {
-//        if (value > std::numeric_limits<uint16_t>::max()) {
-//            throw name + " must be 16-bit expression!";
-//        }
-//
-//        return value;
-//    };
-//
-//    const auto expr_32bit = [](std::string name, auto value) {
-//        if (value > std::numeric_limits<uint32_t>::max()) {
-//            throw name + " must be 32-bit expression!";
-//        }
-//
-//        return value;
-//    };
-//
-//    object.name = psect.name;
-//
-//    object.tylan = expr_16bit("tylan", ResolveExpression(*psect.tylan, state));
-//    object.revision = expr_16bit("attrev", ResolveExpression(*psect.revision, state));
-//    object.edition = expr_16bit("edition", ResolveExpression(*psect.edition, state));
-//
-//    object.stack_size = expr_32bit("stack", ResolveExpression(*psect.stack, state));
-//    object.entry_offset = expr_32bit("entrypt", ResolveExpression(*psect.entry_offset, state));
-//    object.trap_handler_offset = expr_32bit("trapent", ResolveExpression(*psect.trap_handler_offset, state));
-}
-
-}
-
-std::unique_ptr<object::ObjectFile> Assembler::CreateResult(AssemblyState& state) {
-    auto object_file = std::make_unique<object::ObjectFile>();
+    // Set static properties.
+    using clock = std::chrono::system_clock;
+    auto now = clock::now();
+    state.result->assembly_time = clock::to_time_t(now);
 
     // Set assembler info
-    object_file->assembler_version = assembler_version;
-    object_file->assembly_time_epoch = 0; // TODO: get current time as epoch.
-
-    SetObjectInfo(state, *object_file);
-
-    return object_file;
+    state.result->assembler_version = assembler_version;
 }
 
 Assembler::Assembler(uint16_t assembler_version, std::unique_ptr<AssemblerTarget> target)
@@ -117,16 +75,7 @@ std::unique_ptr<object::ObjectFile> Assembler::Process(const std::vector<Entry> 
         }
     }
 
-    // Invoke second pass.
-    for (auto& action : state.second_pass_queue2) {
-        (*action)(state);
-    }
-    
-    // Set static properties.
-    using clock = std::chrono::system_clock;
-    auto now = clock::now();
-    state.result->assembly_time = clock::to_time_t(now);
-
+    CreateResult(state);
     return std::move(state.result);
 }
 
