@@ -117,40 +117,46 @@ std::vector<ExternDefinition> GetExternalDefinitions(const object::ObjectFile& o
     return extern_defs;
 }
 
-std::vector<uint8_t> GetCode(const object::ObjectFile& object_file) {
-    auto& code = object_file.psect.code_data;
+    std::vector<uint8_t> SerializeDataMap(
+        const std::map<object::local_offset, object::MemoryValue>& data_map,
+        size_t size,
+        support::Endian endian
+    ) {
+        std::vector<uint8_t> result {};
 
-    std::vector<uint8_t> result {};
+        size_t write = 0;
+        for (auto [offset, memory] : data_map) {
+            // Zero pad any memory not identified in the memory map
+            result.insert(result.end(), offset - write, 0);
 
-    size_t write = 0;
-    for (auto [offset, memory] : code) {
-        // Zero pad any memory not identified in the memory map
-        result.insert(result.end(), offset - write, 0);
+            if (endian != support::HostEndian) {
+                std::reverse(memory.data.raw.begin(), memory.data.raw.begin() + memory.size);
+            }
 
-        if (object_file.endian != support::HostEndian) {
-            std::reverse(memory.data.raw.begin(), memory.data.raw.begin() + memory.size);
+            result.insert(result.end(), memory.data.raw.begin(), memory.data.raw.begin() + memory.size);
+            write = offset + memory.size;
         }
 
-        result.insert(result.end(), memory.data.raw.begin(), memory.data.raw.begin() + memory.size);
-        write = offset + memory.size;
+        // Zero pad any memory after the map, up to the final counter size
+        result.insert(result.end(), size - write, 0);
+
+        return result;
     }
 
-    // Zero pad any memory after the map, up to the code size
-    result.insert(result.end(), object_file.counter.code - write, 0);
-
-    return result;
+std::vector<uint8_t> GetCode(const object::ObjectFile& object_file) {
+    return SerializeDataMap(object_file.psect.code_data, object_file.counter.code, object_file.endian);
 }
 
-std::vector<DataEntry> GetInitializedData(const object::ObjectFile& object_file) {
-    return {};
+std::vector<uint8_t> GetInitializedData(const object::ObjectFile& object_file) {
+    return SerializeDataMap(object_file.psect.initialized_data, object_file.counter.initialized_data, object_file.endian);
 }
 
-std::vector<DataEntry> GetRemoteInitializedData(const object::ObjectFile& object_file) {
-    return {};
+std::vector<uint8_t> GetRemoteInitializedData(const object::ObjectFile& object_file) {
+    return SerializeDataMap(object_file.psect.remote_initialized_data, object_file.counter.remote_initialized_data, object_file.endian);
 }
 }
 
-Rof15ObjectWriter::Rof15ObjectWriter() { }
+Rof15ObjectWriter::Rof15ObjectWriter() = default;
 
 void Rof15ObjectWriter::Write(const object::ObjectFile& object_file, std::ostream& out) const {
     AssertValid(object_file);
@@ -161,6 +167,8 @@ void Rof15ObjectWriter::Write(const object::ObjectFile& object_file, std::ostrea
 
     const auto& extern_defs = GetExternalDefinitions(object_file);
     const auto& code = GetCode(object_file);
+    const auto& init_data = GetInitializedData(object_file);
+    const auto& remote_init_data = GetRemoteInitializedData(object_file);
 
     // TODO: is this supposed to copy data? why isn't it a ref?
     auto serialize = [&out, this, endian](auto data) {
@@ -186,28 +194,16 @@ void Rof15ObjectWriter::Write(const object::ObjectFile& object_file, std::ostrea
     serialize(code);
 
     // Write Initialized Data and Initialized Remote Data Sections
-    auto serialize_init_data = [&serialize](auto data) {
-        for (auto data_entry : data) {
-            switch (data_entry.type) {
-                // Serialize the entry as the proper type (so endian correction can be done)
-                case DataEntryType::Byte: serialize(data_entry.value.byte); break;
-                case DataEntryType::Half: serialize(data_entry.value.half); break;
-                case DataEntryType::Word: serialize(data_entry.value.word); break;
-            }
-        }
-    };
-
-    serialize_init_data(GetInitializedData(object_file));
-    serialize_init_data(GetRemoteInitializedData(object_file));
+    serialize(init_data);
+    serialize(remote_init_data);
 
     // TODO: debug data would be serialized here, but it's not implemented.
 
-
     // write 3 4-byte zeros to stub out sizes
     uint32_t dummy = 0;
-    serialize(dummy);
-    serialize(dummy);
-    serialize(dummy);
+    serialize(dummy); // external ref count (unimplemented)
+    serialize(dummy); // expr tree count (unimplemented)
+    serialize(dummy); // reference count (unimplemented)
 }
 
 }
