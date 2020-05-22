@@ -110,6 +110,18 @@ uint32_t ExpressionResolver::Resolve(const Expression& expression) const {
             return expr->Resolve(*this);
         }
 
+        // TODO:
+        //   it doesn't make sense to just return a value for a symbol. How would we know
+        //   which counter type it's associated with? This is added for now so we can resolve
+        //   entry points in psect directive (which would only ever be code refs). This means
+        //   this class should probably become ConstexprResolver, and only be used for eval-ing
+        //   expressions that need to be resolved by the assembler. It seems like all other
+        //   expressions should be bubbled up to the linker via expression trees.
+        auto symbol = state.GetSymbol(name);
+        if (symbol && symbol->type == object::SymbolInfo::Type::Code) {
+            return symbol->value.value();
+        }
+
         // TODO: ExpressionResolver exception
         throw std::runtime_error("name could not be resolved");
     });
