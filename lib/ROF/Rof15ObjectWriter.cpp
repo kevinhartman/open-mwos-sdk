@@ -70,11 +70,10 @@ Rof15Header GetHeader(const object::ObjectFile& object_file) {
     header.TypeLanguage() = object_file.tylan;
     header.Revision() = object_file.revision;
 
-    // TODO: write non-zero if assembly fails? Why even produce ROF?
+    // TODO: write non-zero if assembly fails, and user has specified 'force'
     header.AsmValid() = 0;
     header.AsmVersion() = object_file.assembler_version;
 
-    // TODO: For now, just 0'd. not sure the format. Could be DNP3? Convert from epoch above^
     header.AsmDate() = GetDateTime(object_file.assembly_time);
     header.Edition() = object_file.edition;
 
@@ -132,12 +131,12 @@ std::vector<uint8_t> GetCode(const object::ObjectFile& object_file) {
             std::reverse(memory.data.raw.begin(), memory.data.raw.begin() + memory.size);
         }
 
-        result.insert(result.end(), memory.data.raw.begin(), memory.data.raw.end());
+        result.insert(result.end(), memory.data.raw.begin(), memory.data.raw.begin() + memory.size);
         write = offset + memory.size;
     }
 
     // Zero pad any memory after the map, up to the code size
-    result.insert(result.end(), object_file.counter.code - write);
+    result.insert(result.end(), object_file.counter.code - write, 0);
 
     return result;
 }
