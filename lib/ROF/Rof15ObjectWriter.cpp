@@ -189,6 +189,11 @@ void Rof15ObjectWriter::Write(const object::ObjectFile& object_file, std::ostrea
     // TODO: debug data would be serialized here, but it's not implemented.
 
 
+    // write 3 4-byte zeros to stub out sizes
+    uint32_t dummy = 0;
+    serialize(dummy);
+    serialize(dummy);
+    serialize(dummy);
 }
 
 }
