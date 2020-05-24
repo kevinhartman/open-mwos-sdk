@@ -100,20 +100,20 @@ Rof15Header GetHeader(const object::ObjectFile& object_file) {
 
 std::vector<ExternDefinition> GetExternalDefinitions(const object::ObjectFile& object_file) {
     std::vector<ExternDefinition> extern_defs {};
-    extern_defs.reserve(object_file.global_symbols.size());
-
-    for (auto& elem : object_file.global_symbols) {
-        auto& name = elem.first;
-        auto& symbol = elem.second;
-
-        //symbol.type
-
-        rof::ExternDefinition definition {};
-        definition.Name() = name;
-        // TODO: finish implementing
-        //definition.Type() = symbo
-        //extern_definitions.emplace_back({})
-    }
+//    extern_defs.reserve(object_file.global_symbols.size());
+//
+//    for (auto& elem : object_file.global_symbols) {
+//        auto& name = elem.first;
+//        auto& symbol = elem.second;
+//
+//        //symbol.type
+//
+//        rof::ExternDefinition definition {};
+//        definition.Name() = name;
+//        // TODO: finish implementing
+//        //definition.Type() = symbo
+//        //extern_definitions.emplace_back({})
+//    }
 
     return extern_defs;
 }
