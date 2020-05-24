@@ -65,6 +65,7 @@ SCENARIO("DS operation expression resolution behavior", "[assembler]") {
 
         WHEN("the size operand is a constant expression") {
             auto entry = ParseEntry("var ds.b 4+5/2");
+            state.pending_labels.insert(entry.label.value());
 
             REQUIRE(handler.Handle(entry, state));
             REQUIRE(state.result->counter.uninitialized_data == 6);
@@ -83,6 +84,8 @@ SCENARIO("DS operation expression resolution behavior", "[assembler]") {
             state.equs["constequ"] = std::make_unique<ExpressionOperand>(info);
 
             auto entry = ParseEntry("var ds.b constequ+1");
+            state.pending_labels.insert(entry.label.value());
+
             REQUIRE(handler.Handle(entry, state));
             REQUIRE(state.result->counter.uninitialized_data == 8);
             REQUIRE(state.GetSymbol("var") == object::SymbolInfo { object::SymbolInfo::Type::UninitData, false, 0 });
@@ -110,6 +113,7 @@ SCENARIO("DS operation behavior", "[assembler]") {
 
         WHEN("a single byte is declared with the label 'var'") {
             auto entry = ParseEntry("var ds.b 1");
+            state.pending_labels.insert(entry.label.value());
 
             REQUIRE(handler.Handle(entry, state));
             REQUIRE(state.result->counter.uninitialized_data == 1);
@@ -117,6 +121,7 @@ SCENARIO("DS operation behavior", "[assembler]") {
         }
         AND_WHEN("two bytes are declared with the label 'var'") {
             auto entry = ParseEntry("var ds.b 2");
+            state.pending_labels.insert(entry.label.value());
 
             REQUIRE(handler.Handle(entry, state));
             REQUIRE(state.result->counter.uninitialized_data == 2);
