@@ -61,7 +61,10 @@ public:
             // TODO: improve error message
             throw OperandException(info.op, info.index, "failed to resolve expression.");
         }
+    }
 
+    std::unique_ptr<expression::Expression> Move() {
+        return std::move(expr);
     }
 
 private:

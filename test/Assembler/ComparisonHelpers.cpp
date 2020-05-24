@@ -46,7 +46,7 @@ bool operator==(const expression::Expression &e1, const expression::Expression &
 
 namespace object {
 bool operator==(const ExpressionMapping &e1, const ExpressionMapping &e2) {
-    return std::tie(e1.offset, e1.bit_count, *e1.expression) == std::tie(e2.offset, e2.bit_count, *e2.expression);
+    return std::tie(e1.offset, e1.bit_count, e1.is_signed, *e1.expression) == std::tie(e2.offset, e2.bit_count, e2.is_signed, *e2.expression);
 }
 
 bool operator==(const SymbolInfo &s1, const SymbolInfo &s2) {

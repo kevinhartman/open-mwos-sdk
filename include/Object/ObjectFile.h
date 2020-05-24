@@ -78,8 +78,11 @@ struct SymbolInfo {
 };
 
 struct ExpressionMapping {
+    ExpressionMapping(size_t offset, size_t bit_count, bool is_signed, std::shared_ptr<expression::Expression> expr)
+        : offset(offset), bit_count(bit_count), is_signed(is_signed), expression(std::move(expr)) {}
     size_t offset;
     size_t bit_count;
+    bool is_signed;
     std::shared_ptr<expression::Expression> expression;
 };
 
@@ -92,7 +95,6 @@ struct MemoryValue {
         uint8_t u8;
     } data {};
     size_t size {};
-    bool is_signed {};
     std::vector<ExpressionMapping> expr_mappings {};
 };
 

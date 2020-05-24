@@ -147,7 +147,6 @@ SCENARIO("DC operation behavior", "[assembler]") {
 
             for (std::size_t i = 0; i < 3; i++) {
                 REQUIRE(data_map[i].size == 1);
-                REQUIRE(data_map[i].is_signed == false);
             }
 
             // Invoke second pass.
@@ -174,7 +173,6 @@ SCENARIO("DC operation behavior", "[assembler]") {
 
             for (std::size_t i = 0; i < 3; i++) {
                 REQUIRE(data_map[i].size == 1);
-                REQUIRE(data_map[i].is_signed == false);
             }
 
             // Invoke second pass.
@@ -201,7 +199,6 @@ SCENARIO("DC operation behavior", "[assembler]") {
 
             for (std::size_t i = 0; i < 3; i++) {
                 REQUIRE(data_map[i].size == 1);
-                REQUIRE(data_map[i].is_signed == false);
             }
 
             // Invoke second pass.
@@ -230,7 +227,6 @@ SCENARIO("DC operation behavior", "[assembler]") {
 
             for (std::size_t i = 0; i < 6; i += 2) {
                 REQUIRE(data_map[i].size == 2);
-                REQUIRE(data_map[i].is_signed == false);
             }
 
             // Invoke second pass.
@@ -256,7 +252,6 @@ SCENARIO("DC operation behavior", "[assembler]") {
 
             for (std::size_t i = 0; i < 6; i += 2) {
                 REQUIRE(data_map[i].size == 2);
-                REQUIRE(data_map[i].is_signed == false);
             }
 
             // Invoke second pass.
@@ -283,7 +278,6 @@ SCENARIO("DC operation behavior", "[assembler]") {
 
             for (std::size_t i = 0; i < 6; i += 2) {
                 REQUIRE(data_map[i].size == 2);
-                REQUIRE(data_map[i].is_signed == false);
             }
 
             // Invoke second pass.

@@ -33,11 +33,11 @@ namespace assembler {
         return std::vector<object::ExpressionMapping> { std::forward<T>(mappings)... };
     }
 
-    object::ExpressionMapping MakeExpressionMapping(size_t offset, size_t bit_count, std::string expression_str) {
+    object::ExpressionMapping MakeExpressionMapping(size_t offset, size_t bit_count, bool is_signed, std::string expression_str) {
         ExpressionLexer lexer(expression_str);
         ExpressionParser parser(lexer);
 
-        return object::ExpressionMapping { offset, bit_count, parser.Parse() };
+        return object::ExpressionMapping(offset, bit_count, is_signed, parser.Parse());
     }
 
     std::optional<std::string> DecodeWithCapstone(uint32_t instruction) {
@@ -70,11 +70,11 @@ namespace assembler {
         GIVEN("each MIPS assembler instruction") {
             auto pair = GENERATE(values<InstructionToExpected>({
                 { MakeEntry("add", "at,v0,v1"), "add $at, $v0, $v1", {} },
-                { MakeEntry("addi", "k1,sp,-32"), "addi $k1, $sp, 0", MakeExpressionMappings(MakeExpressionMapping(0, 16, "-32")) },
+                { MakeEntry("addi", "k1,sp,-32"), "addi $k1, $sp, 0", MakeExpressionMappings(MakeExpressionMapping(0, 16, true, "-32")) },
                 { MakeEntry("addu", "t1,t1,a0"), "addu $t1, $t1, $a0", {}},
-                { MakeEntry("sb", "zero,-4(t0)"), "sb $zero, ($t0)", MakeExpressionMappings(MakeExpressionMapping(0, 16, "-4")) },
-                { MakeEntry("jal", "0xFFFFFF"), "jal 0", MakeExpressionMappings(MakeExpressionMapping(0, 26, "0xFFFFFF"))},
-                { MakeEntry("srl", "k0,$5,$1D"), "srl $k0, $a1, 0", MakeExpressionMappings(MakeExpressionMapping(6, 5, "$1D")) },
+                { MakeEntry("sb", "zero,-4(t0)"), "sb $zero, ($t0)", MakeExpressionMappings(MakeExpressionMapping(0, 16, true, "-4")) },
+                { MakeEntry("jal", "0xFFFFFF"), "jal 0", MakeExpressionMappings(MakeExpressionMapping(0, 26, false, "0xFFFFFF"))},
+                { MakeEntry("srl", "k0,$5,$1D"), "srl $k0, $a1, 0", MakeExpressionMappings(MakeExpressionMapping(6, 5, false, "$1D")) },
                 { MakeEntry("jalr", "t4"), "jalr $t4", {} },
                 { MakeEntry("jalr", "$31,t4"), "jalr $t4", {} },
                 { MakeEntry("jalr", "$30,t4"), "jalr $fp, $t4", {} },

@@ -124,12 +124,11 @@ void Op_DC(std::unique_ptr<Operation> operation, AssemblyState& state) {
             object::MemoryValue v {};
             v.data.u32 = 0;
             v.size = Size;
-            v.is_signed = IsSigned;
 
             data_map[counter] = std::move(v);
 
             auto second_pass = std::make_unique<SecondPassAction>(
-                [&field = data_map[counter]](AssemblyState& s, const ExpressionOperand& value_operand) {
+                [&field = data_map[counter]](AssemblyState& s, ExpressionOperand& value_operand) {
                     ExpressionResolver resolver(s);
 
                     try {
@@ -137,7 +136,7 @@ void Op_DC(std::unique_ptr<Operation> operation, AssemblyState& state) {
                         field.data.u32 = value;
                     } catch (OperandException& e) {
                         // Expression has external references.
-                        field.expr_mappings = { object::ExpressionMapping {0, Size }};
+                        field.expr_mappings = { object::ExpressionMapping(0, Size, IsSigned, value_operand.Move()) };
                     }
                 },
                 std::move(value_operand)

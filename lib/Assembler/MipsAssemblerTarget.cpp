@@ -195,7 +195,7 @@ object::MemoryValue RType(const Entry& entry) {
 
     if constexpr (IsArgSentinel(Shift)) {
         instruction.expr_mappings.emplace_back(
-            object::ExpressionMapping{ 6, 5, ParseExpression(std::get<assembler::Shift>(operands).value())});
+            object::ExpressionMapping(6, 5, false, ParseExpression(std::get<assembler::Shift>(operands).value())));
     } else {
         instruction.data.u32 |= Shift << 6U;
     }
@@ -205,7 +205,7 @@ object::MemoryValue RType(const Entry& entry) {
 
 typedef std::tuple<RS, RT, Immediate> (*ITypeSyntaxFunc)(std::string);
 
-template <uint32_t OpCode, uint32_t RS, uint32_t RT, uint32_t Immediate, ITypeSyntaxFunc Syntax>
+template <uint32_t OpCode, uint32_t RS, uint32_t RT, uint32_t Immediate, ITypeSyntaxFunc Syntax, bool IsSigned = true>
 object::MemoryValue IType(const Entry& entry) {
     object::MemoryValue instruction {};
     instruction.data.u32 = OpCode << 26U;
@@ -227,7 +227,7 @@ object::MemoryValue IType(const Entry& entry) {
 
     if constexpr (IsArgSentinel(Immediate)) {
         instruction.expr_mappings.emplace_back(
-            object::ExpressionMapping{ 0, 16, ParseExpression(std::get<assembler::Immediate>(operands).value()) });
+            object::ExpressionMapping(0, 16, IsSigned, ParseExpression(std::get<assembler::Immediate>(operands).value()) ));
     } else {
         instruction.data.u32 |= Immediate;
     }
@@ -246,7 +246,7 @@ object::MemoryValue JType(const Entry& entry) {
     auto operands = Syntax(entry.operands.value_or(""));
     if constexpr (IsArgSentinel(Target)) {
         instruction.expr_mappings.emplace_back(
-            object::ExpressionMapping{ 0, 26, ParseExpression(std::get<assembler::Target>(operands).value()) });
+            object::ExpressionMapping(0, 26, false, ParseExpression(std::get<assembler::Target>(operands).value())));
     } else {
         instruction.data.u32 |= Target;
     }
@@ -283,7 +283,7 @@ object::MemoryValue ParseCOPz(const Entry& entry) {
     }
 
     // Add 25 bit Co-processor operation as expression.
-    instruction.expr_mappings.emplace_back(object::ExpressionMapping{ 0, 25, ParseExpression(entry.operands.value()) });
+    instruction.expr_mappings.emplace_back(object::ExpressionMapping(0, 25, false, ParseExpression(entry.operands.value())));
 
     return instruction;
 }
@@ -299,7 +299,7 @@ std::unordered_map<std::string, ParseFunc> instructions_fn = {
     { "addiu",  IType<0b001001, Arg, Arg, Arg, ITypeTuple<RT, RS, Immediate>> },
     { "addu",   RType<0b000000, Arg, Arg, Arg, 0b00000, 0b100001, RTypeTuple<RD, RS, RT>> },
     { "and",    RType<0b000000, Arg, Arg, Arg, 0b00000, 0b100100, RTypeTuple<RD, RS, RT>> },
-    { "andi",   IType<0b001100, Arg, Arg, Arg, ITypeTuple<RT, RS, Immediate>> },
+    { "andi",   IType<0b001100, Arg, Arg, Arg, ITypeTuple<RT, RS, Immediate>, false> },
     { "beq",    IType<0b000100, Arg, Arg, Arg, ITypeTuple<RS, RT, Immediate>> },
     { "bgez",   IType<0b000001, Arg, 0b00001, Arg, ITypeTuple<RS, Immediate>> },
     { "bgezal", IType<0b000001, Arg, 0b10001, Arg, ITypeTuple<RS, Immediate>> },
@@ -331,7 +331,7 @@ std::unordered_map<std::string, ParseFunc> instructions_fn = {
     { "lbu",    IType<0b100100, Arg, Arg, Arg, ITypeOffset<RT, Immediate, RS>> },
     { "lh",     IType<0b100001, Arg, Arg, Arg, ITypeOffset<RT, Immediate, RS>> },
     { "lhu",    IType<0b100101, Arg, Arg, Arg, ITypeOffset<RT, Immediate, RS>> },
-    { "lui",    IType<0b001111, 0b00000, Arg, Arg, ITypeTuple<RT, Immediate>> },
+    { "lui",    IType<0b001111, 0b00000, Arg, Arg, ITypeTuple<RT, Immediate>, false> },
     { "lw",     IType<0b100011, Arg, Arg, Arg, ITypeOffset<RT, Immediate, RS>> },
     { "lwc0",   ThrowInvalidCoprocessor },
     { "lwc1",   IType<0b110001, Arg, Arg, Arg, ITypeOffset<RT, Immediate, RS>> },
@@ -355,7 +355,7 @@ std::unordered_map<std::string, ParseFunc> instructions_fn = {
     { "multu",  RType<0b000000, Arg, Arg, 0b00000, 0b00000, 0b011001, RTypeTuple<RS, RT>> },
     { "nor",    RType<0b000000, Arg, Arg, Arg, 0b00000, 0b100111, RTypeTuple<RD, RS, RT>> },
     { "or",     RType<0b000000, Arg, Arg, Arg, 0b00000, 0b100101, RTypeTuple<RD, RS, RT>> },
-    { "ori",    IType<0b001101, Arg, Arg, Arg, ITypeTuple<RT, RS, Immediate>> },
+    { "ori",    IType<0b001101, Arg, Arg, Arg, ITypeTuple<RT, RS, Immediate>, false> },
     { "sb",     IType<0b101000, Arg, Arg, Arg, ITypeOffset<RT, Immediate, RS>> },
     { "sh",     IType<0b101001, Arg, Arg, Arg, ITypeOffset<RT, Immediate, RS>> },
     { "sll",    RType<0b000000, 0b00000, Arg, Arg, Arg, 0b000000, RTypeTuple<RD, RT, Shift>> },
@@ -379,7 +379,7 @@ std::unordered_map<std::string, ParseFunc> instructions_fn = {
     { "swr",    IType<0b101110, Arg, Arg, Arg, ITypeOffset<RT, Immediate, RS>> },
     { "syscall",RType<0b000000, 0b00000, 0b00000, 0b00000, 0b00000, 0b001100, RTypeNoArgs> },
     { "xor",    RType<0b000000, Arg, Arg, Arg, 0b00000, 0b100110, RTypeTuple<RD, RS, RT>> },
-    { "xori",   IType<0b001110, Arg, Arg, Arg, ITypeTuple<RT, RS, Immediate>> },
+    { "xori",   IType<0b001110, Arg, Arg, Arg, ITypeTuple<RT, RS, Immediate>, false> },
 
     // CP-0 Instructions
     // Note: these can also be invoked using copz generic instruction.

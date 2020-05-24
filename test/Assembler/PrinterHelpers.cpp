@@ -113,7 +113,7 @@ std::ostream& operator<<(std::ostream& os, const Expression& expr) {
 
 namespace object {
 std::ostream &operator<<(std::ostream &os, const ExpressionMapping &expr) {
-    os << "{ offset: " << expr.offset << " bit_count: " << expr.bit_count << " expression: " << *expr.expression;
+    os << "{ offset: " << expr.offset << " bit_count: " << expr.bit_count << " is_signed: " << expr.is_signed << " expression: " << *expr.expression;
     return os;
 }
 

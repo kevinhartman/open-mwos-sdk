@@ -30,7 +30,7 @@ private:
     }
 
     template <typename F, typename ...T>
-    void InitAction(F action, const T& ...ops) {
+    void InitAction(F action, T& ...ops) {
         _action = [action, &ops...](AssemblyState& state) {
             action(state, ops...);
         };

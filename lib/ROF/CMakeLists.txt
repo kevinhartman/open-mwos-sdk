@@ -1,4 +1,5 @@
 add_library(ROF
+        ExpressionTreeBuilder.cpp
         Rof15ObjectWriter.cpp)
 
 target_include_directories(ROF PUBLIC

@@ -1,13 +1,15 @@
-#include <Serialization.h>
+#include <ExpressionTreeBuilder.h>
 #include <Numeric.h>
 #include <ObjectFile.h>
 #include <Rof15ObjectFile.h>
 #include <Rof15ObjectWriter.h>
+#include <Serialization.h>
 
 #include <cassert>
 #include <limits>
 #include <utility>
 #include <chrono>
+#include <tuple>
 
 namespace rof {
 
@@ -154,6 +156,65 @@ std::vector<uint8_t> GetInitializedData(const object::ObjectFile& object_file) {
 std::vector<uint8_t> GetRemoteInitializedData(const object::ObjectFile& object_file) {
     return SerializeDataMap(object_file.psect.remote_initialized_data, object_file.counter.remote_initialized_data, object_file.endian);
 }
+
+using ReferenceInfo = std::tuple<std::vector<Reference>, std::vector<std::unique_ptr<ExpressionTree>>>;
+ReferenceInfo GetReferenceInfo(const object::ObjectFile& object_file) {
+    ReferenceInfo reference_info {};
+    auto& [references, trees] = reference_info;
+
+    auto expression_tree = [&object_file, &trees = trees](auto& expr) {
+        auto index = trees.size();
+        ExpressionTreeBuilder builder(object_file);
+        trees.emplace_back(builder.Build(expr));
+        return index;
+    };
+
+    for (auto [offset, memory] : object_file.psect.code_data) {
+        for (auto& mapping : memory.expr_mappings) {
+            // TODO: check this...
+            auto byte_index = (memory.size * 8 - (mapping.offset + mapping.bit_count)) / 8;
+
+            Reference reference {};
+            reference.BitNumber() = mapping.offset;
+            reference.FieldLength() = mapping.bit_count;
+            reference.LocalOffset() = offset + byte_index;
+            reference.LocationFlag() = 0b100000; // code
+            reference.LocationFlag() |= (mapping.is_signed ? 0b10000000000U : 0U);
+            reference.ExprTreeIndex() = expression_tree(*mapping.expression);
+
+            references.emplace_back(reference);
+        }
+    }
+
+    // TODO: implement references for data
+
+    return reference_info;
+}
+
+class ExpressionTreeSerializer {
+public:
+    ExpressionTreeSerializer(std::ostream& out, support::Endian endian) : out(out), endian(endian) {}
+
+    void operator()(ExpressionRef const& ref) {
+        serializer::Serialize(static_cast<SerializableExprRef>(ref), out, endian);
+    }
+
+    void operator()(ExpressionVal const& val) {
+        serializer::Serialize(val, out, endian);
+    }
+
+    void operator()(std::unique_ptr<ExpressionTree> const& tree) {
+        if (!tree) return;
+        serializer::Serialize(tree->op, out, endian);
+        std::visit(ExpressionTreeSerializer(out, endian), tree->operand1);
+        std::visit(ExpressionTreeSerializer(out, endian), tree->operand2);
+    }
+
+private:
+    std::ostream& out;
+    support::Endian endian;
+};
+
 }
 
 Rof15ObjectWriter::Rof15ObjectWriter() = default;
@@ -199,11 +260,29 @@ void Rof15ObjectWriter::Write(const object::ObjectFile& object_file, std::ostrea
 
     // TODO: debug data would be serialized here, but it's not implemented.
 
-    // write 3 4-byte zeros to stub out sizes
-    uint32_t dummy = 0;
-    serialize(dummy); // external ref count (unimplemented)
-    serialize(dummy); // expr tree count (unimplemented)
-    serialize(dummy); // reference count (unimplemented)
+    // Write external ref count (TODO: unimplemented)
+    serialize(uint32_t(0));
+
+    // TODO: write external refs here.
+
+    auto [references, expression_trees] = GetReferenceInfo(object_file);
+
+    // Write expression tree size (TODO: check bounds)
+    serialize(static_cast<uint32_t>(expression_trees.size()));
+
+    // Write expression tree structures
+    ExpressionTreeSerializer tree_serializer(out, endian);
+    for (auto& tree : expression_trees) {
+        tree_serializer(tree);
+    }
+
+    // Write reference count
+    serialize(static_cast<uint32_t>(references.size()));
+
+    // Write reference structures
+    for (Reference ref : references) {
+        serialize(static_cast<SerializableReference>(ref));
+    }
 }
 
 }
