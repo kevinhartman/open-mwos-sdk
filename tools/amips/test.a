@@ -1,0 +1,4 @@
+    psect program,$0101,0,21,0,main
+main:
+    addi k1,sp,-32
+    ends
