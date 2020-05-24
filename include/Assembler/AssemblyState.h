@@ -73,7 +73,7 @@ struct AssemblyState {
         second_pass_queue2.emplace_back(std::move(action));
     }
 
-    inline std::optional<object::SymbolInfo> GetSymbol(std::string name) const {
+    inline std::optional<object::SymbolInfo> GetSymbol(const std::string& name) const {
         auto symbol_itr = result->psect.symbols.find(name);
         if (symbol_itr != result->psect.symbols.end()) {
             return symbol_itr->second;
