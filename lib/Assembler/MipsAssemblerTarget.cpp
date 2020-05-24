@@ -81,9 +81,9 @@ std::tuple<RS, RT, RD, Shift> RTypeTuple(std::string operand_str) {
     auto operands = Split(operand_str, std::regex(","));
     auto tup = std::make_tuple<RS, RT, RD, Shift>(std::nullopt, std::nullopt, std::nullopt, std::nullopt);
 
-    std::get<Arg1>(tup) = operands[0];
-    std::get<Arg2>(tup) = operands[1];
-    std::get<Arg3>(tup) = operands[2];
+    std::get<Arg1>(tup) = operands.at(0);
+    std::get<Arg2>(tup) = operands.at(1);
+    std::get<Arg3>(tup) = operands.at(2);
 
     return tup;
 }
@@ -93,8 +93,8 @@ std::tuple<RS, RT, RD, Shift> RTypeTuple(std::string operand_str) {
     auto operands = Split(operand_str, std::regex(","));
     auto tup = std::make_tuple<RS, RT, RD, Shift>(std::nullopt, std::nullopt, std::nullopt, std::nullopt);
 
-    std::get<Arg1>(tup) = operands[0];
-    std::get<Arg2>(tup) = operands[1];
+    std::get<Arg1>(tup) = operands.at(0);
+    std::get<Arg2>(tup) = operands.at(1);
 
     return tup;
 }
@@ -104,7 +104,7 @@ std::tuple<RS, RT, RD, Shift> RTypeTuple(std::string operand_str) {
     auto operands = Split(operand_str, std::regex(","));
     auto tup = std::make_tuple<RS, RT, RD, Shift>(std::nullopt, std::nullopt, std::nullopt, std::nullopt);
 
-    std::get<Arg1>(tup) = operands[0];
+    std::get<Arg1>(tup) = operands.at(0);
 
     return tup;
 }
@@ -118,9 +118,9 @@ std::tuple<RS, RT, Immediate> ITypeTuple(std::string operand_str) {
     auto operands = Split(operand_str, std::regex(","));
 
     auto tup = std::make_tuple<RS, RT, Immediate>(std::nullopt, std::nullopt, std::nullopt);
-    std::get<Arg1>(tup) = operands[0];
-    std::get<Arg2>(tup) = operands[1];
-    std::get<Arg3>(tup) = operands[2];
+    std::get<Arg1>(tup) = operands.at(0);
+    std::get<Arg2>(tup) = operands.at(1);
+    std::get<Arg3>(tup) = operands.at(2);
 
     return tup;
 }
@@ -133,7 +133,9 @@ std::tuple<RS, RT, Immediate> ITypeOffset(std::string operand_str) {
     std::regex_search(operands[1], matches, std::regex(R"((.*)\((.*)\))"));
 
     auto tup = std::make_tuple<RS, RT, Immediate>(std::nullopt, std::nullopt, std::nullopt);
-    std::get<Arg1>(tup) = operands[0];
+    std::get<Arg1>(tup) = operands.at(0);
+
+    // TODO: matches[n] will be a sentinel if match failed.
     std::get<Arg2>(tup) = matches[1].str();
     std::get<Arg3>(tup) = matches[2].str();
 
@@ -145,8 +147,8 @@ std::tuple<RS, RT, Immediate> ITypeTuple(std::string operand_str) {
     auto operands = Split(operand_str, std::regex(","));
     auto tup = std::make_tuple<RS, RT, Immediate>(std::nullopt, std::nullopt, std::nullopt);
 
-    std::get<Arg1>(tup) = operands[0];
-    std::get<Arg2>(tup) = operands[1];
+    std::get<Arg1>(tup) = operands.at(0);
+    std::get<Arg2>(tup) = operands.at(1);
 
     return tup;
 }
@@ -258,7 +260,7 @@ object::MemoryValue ParseJALR(const Entry& entry) {
     try {
         // TODO: catch correct exception only
         return RType<0b000000, Arg, 0b00000, Arg, 0b000000, 0b001001, RTypeTuple<RD, RS>>(entry);
-    } catch (...) {
+    } catch (const std::out_of_range&) {
         // Try to parse as single register. If it works (it's RS), inject default $31 for RD.
         ParseRegister(entry.operands.value_or(""));
         return RType<0b000000, Arg, 0b00000, Arg, 0b000000, 0b001001, RTypeTuple<RD, RS>>(
