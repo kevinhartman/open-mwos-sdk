@@ -12,15 +12,14 @@
 
 int main(int argc, const char* argv[]) {
     std::fstream in_file;
-    in_file.exceptions(std::fstream::badbit | std::fstream::failbit | std::fstream::eofbit);
+    in_file.exceptions(std::fstream::badbit);
+    in_file.open(argv[1], std::fstream::in);
 
-    try {
-        in_file.open(argv[1], std::fstream::in | std::fstream::binary);
-    } catch (std::exception const& e) {
-        std::cerr << e.what();
+    if (!in_file.is_open()) {
+        std::cerr << "Failed to open input file.";
         exit(1);
     }
-
+    
     assembler::InputFileParser parser {};
     parser.Parse(in_file);
 
