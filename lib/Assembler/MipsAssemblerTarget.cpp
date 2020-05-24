@@ -59,7 +59,7 @@ uint32_t ParseRegister(std::string register_str) {
         }
     }
 
-    throw "invalid reg name";
+    throw std::runtime_error("invalid reg name");
 }
 
 std::unique_ptr<Expression> ParseExpression(const std::string& expr_str) {
@@ -280,7 +280,7 @@ object::MemoryValue ParseCOPz(const Entry& entry) {
     auto instruction = JType<OpCode, 0x2000000, JTypeTuple<Target>>(entry);
 
     if (!entry.operands) {
-        throw "missing operation";
+        throw std::runtime_error("missing operation");
     }
 
     // Add 25 bit Co-processor operation as expression.
@@ -290,7 +290,7 @@ object::MemoryValue ParseCOPz(const Entry& entry) {
 }
 
 object::MemoryValue ThrowInvalidCoprocessor(const Entry& entry) {
-    throw "Instruction not supported by coprocessor: " + entry.operation.value();
+    throw std::runtime_error("Instruction not supported by coprocessor: " + entry.operation.value());
 }
 
 typedef object::MemoryValue (*ParseFunc)(const Entry&);
