@@ -258,7 +258,6 @@ object::MemoryValue JType(const Entry& entry) {
 
 object::MemoryValue ParseJALR(const Entry& entry) {
     try {
-        // TODO: catch correct exception only
         return RType<0b000000, Arg, 0b00000, Arg, 0b000000, 0b001001, RTypeTuple<RD, RS>>(entry);
     } catch (const std::out_of_range&) {
         // Try to parse as single register. If it works (it's RS), inject default $31 for RD.
