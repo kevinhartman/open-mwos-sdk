@@ -1,5 +1,5 @@
 #include <catch2/catch.hpp>
-#include <capstone/capstone.h>
+#include <capstone.h>
 
 #include "ComparisonHelpers.h"
 #include "PrinterHelpers.h"
