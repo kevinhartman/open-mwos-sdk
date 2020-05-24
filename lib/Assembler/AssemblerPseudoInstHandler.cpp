@@ -304,7 +304,7 @@ void Op_Align(std::unique_ptr<Operation> operation, AssemblyState& state) {
 }
 
 void Op_Unimplemented(std::unique_ptr<Operation> operation, AssemblyState& state) {
-    throw "pseudo instruction is unimplemented: " + operation->GetEntry().operation.value_or("");
+    throw std::runtime_error("pseudo instruction is unimplemented: " + operation->GetEntry().operation.value_or(""));
 }
 
 typedef void (*PseudoInstFunc)(std::unique_ptr<Operation>, AssemblyState&);
