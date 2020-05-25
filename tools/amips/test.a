@@ -3,4 +3,5 @@ main:
     addi k1,sp,-32
     j 0x2345678
     sll k1,sp,0x1F
+    bne t0,$0,main
     ends

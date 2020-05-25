@@ -6,10 +6,11 @@
 #include <Serialization.h>
 
 #include <cassert>
-#include <limits>
-#include <utility>
 #include <chrono>
+#include <limits>
+#include <string>
 #include <tuple>
+#include <utility>
 
 namespace rof {
 
@@ -157,14 +158,14 @@ std::vector<uint8_t> GetRemoteInitializedData(const object::ObjectFile& object_f
     return SerializeDataMap(object_file.psect.remote_initialized_data, object_file.counter.remote_initialized_data, object_file.endian);
 }
 
-using ReferenceInfo = std::tuple<std::vector<Reference>, std::vector<std::unique_ptr<ExpressionTree>>>;
+using ReferenceInfo = std::tuple<std::vector<Reference>, std::vector<std::unique_ptr<ExpressionTree>>, std::vector<std::string>>;
 ReferenceInfo GetReferenceInfo(const object::ObjectFile& object_file) {
     ReferenceInfo reference_info {};
-    auto& [references, trees] = reference_info;
+    auto& [references, trees, extern_refs] = reference_info;
 
-    auto expression_tree = [&object_file, &trees = trees](auto& expr) {
+    auto expression_tree = [&object_file, &trees = trees, &extern_refs = extern_refs](auto& expr) {
         auto index = trees.size();
-        ExpressionTreeBuilder builder(object_file);
+        ExpressionTreeBuilder builder(object_file, extern_refs);
         trees.emplace_back(builder.Build(expr));
         return index;
     };
@@ -260,12 +261,13 @@ void Rof15ObjectWriter::Write(const object::ObjectFile& object_file, std::ostrea
 
     // TODO: debug data would be serialized here, but it's not implemented.
 
-    // Write external ref count (TODO: unimplemented)
-    serialize(uint32_t(0));
+    auto [references, expression_trees, extern_refs] = GetReferenceInfo(object_file);
 
-    // TODO: write external refs here.
+    // Write external ref count
+    serialize(static_cast<uint32_t>(extern_refs.size()));
 
-    auto [references, expression_trees] = GetReferenceInfo(object_file);
+    // Write external references
+    serialize(extern_refs);
 
     // Write expression tree size (TODO: check bounds)
     serialize(static_cast<uint32_t>(expression_trees.size()));

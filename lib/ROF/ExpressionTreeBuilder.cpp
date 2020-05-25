@@ -9,7 +9,6 @@ namespace rof {
         result->operand1 = expr.value;
     }
 
-    // TODO: implement
     void ExpressionTreeBuilder::Visit(const ReferenceExpression& expr) {
         result = std::make_unique<ExpressionTree>(ExpressionOperator::Reference);
 
@@ -17,9 +16,52 @@ namespace rof {
         reference.Flags() = 0;
         reference.Value() = 0;
 
-        result->operand1 = std::move(reference);
+        auto sym_itr = object_file.psect.symbols.find(expr.Value());
 
-        throw std::runtime_error("unimplemented");
+        if (sym_itr != object_file.psect.symbols.end()) {
+            // local reference
+            reference.Flags() |= 0b1000000000000U;
+            auto& symbol = sym_itr->second;
+            switch (symbol.type) {
+                case object::SymbolInfo::Code:
+                    reference.Flags() |= 0b100U;
+                    break;
+                case object::SymbolInfo::Equ:
+                    reference.Flags() |= 0b10U;
+                    break;
+                case object::SymbolInfo::Set:
+                    reference.Flags() |= 0b01U;
+                    break;
+                case object::SymbolInfo::InitData:
+                    reference.Flags() |= 0b1U;
+                    break;
+                case object::SymbolInfo::UninitData:
+                    break;
+                case object::SymbolInfo::RemoteInitData:
+                    reference.Flags() |= 0b11U;
+                    break;
+                case object::SymbolInfo::RemoteUninitData:
+                    reference.Flags() |= 0b10U;
+                    break;
+            }
+
+            // TODO: handle nullopt, or make sym val non-optional if NA
+            reference.Value() = symbol.value.value();
+        } else {
+            // external reference
+            auto extern_ref = std::find(extern_refs.begin(), extern_refs.end(), expr.Value());
+            if (extern_ref != extern_refs.end()) {
+                // reuse existing extern reference
+                reference.Value() = std::distance(extern_refs.begin(), extern_ref);
+            } else {
+                // new extern ref
+                reference.Value() = extern_refs.size();
+                extern_refs.emplace_back(expr.Value());
+            }
+            // TODO: implement alignment requirement support (bits 3-4) and relative ref (bit 7).
+        }
+
+        result->operand1 = std::move(reference);
     }
 
     void ExpressionTreeBuilder::Visit(const HiExpression& expr) {
@@ -107,12 +149,12 @@ namespace rof {
     }
 
     std::unique_ptr<ExpressionTree> ExpressionTreeBuilder::SubTree(const expression::Expression& expr) const {
-        ExpressionTreeBuilder builder(object_file);
+        ExpressionTreeBuilder builder(object_file, extern_refs);
         return builder.Build(expr);
     }
 
-    ExpressionTreeBuilder::ExpressionTreeBuilder(const object::ObjectFile& object_file) :
-        object_file(object_file) {}
+    ExpressionTreeBuilder::ExpressionTreeBuilder(const object::ObjectFile& object_file, std::vector<std::string>& extern_refs) :
+        object_file(object_file), extern_refs(extern_refs) {}
 
     std::unique_ptr<ExpressionTree> ExpressionTreeBuilder::Build(const Expression& expression) {
         expression.Accept(*this);

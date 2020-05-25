@@ -3,6 +3,7 @@
 #include <Expression.h>
 
 #include <memory>
+#include <vector>
 
 namespace object {
 class ObjectFile;
@@ -12,7 +13,7 @@ namespace rof {
 class ExpressionTree;
 class ExpressionTreeBuilder : public expression::ExpressionVisitor {
 public:
-    explicit ExpressionTreeBuilder(const object::ObjectFile&);
+    explicit ExpressionTreeBuilder(const object::ObjectFile&, std::vector<std::string>&);
     std::unique_ptr<ExpressionTree> Build(const expression::Expression& expression);
 
 protected:
@@ -39,5 +40,6 @@ private:
     std::unique_ptr<ExpressionTree> SubTree(const expression::Expression& expr) const;
 
     const object::ObjectFile& object_file;
+    std::vector<std::string>& extern_refs;
 };
 }
