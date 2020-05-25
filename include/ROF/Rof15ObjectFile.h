@@ -33,6 +33,18 @@ struct ExternDefinition : SerializableExternDefinition {
     auto& SymbolValue() { return std::get<2>(*this); }
 };
 
+enum ReferenceFlags : uint16_t {
+    Data = 0,
+    Code = 1 << 5,
+    Remote = 1 << 9,
+    Signed = 1 << 10
+};
+
+inline ReferenceFlags operator|(ReferenceFlags a, ReferenceFlags b)
+{
+    return static_cast<ReferenceFlags>(static_cast<uint16_t>(a) | static_cast<uint16_t>(b));
+}
+
 using SerializableReference = SerializableStruct<uint8_t, uint8_t, uint16_t, uint32_t, uint32_t>;
 struct Reference : SerializableReference {
     auto& BitNumber() { return std::get<0>(*this); }

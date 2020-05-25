@@ -158,36 +158,46 @@ std::vector<uint8_t> GetRemoteInitializedData(const object::ObjectFile& object_f
     return SerializeDataMap(object_file.psect.remote_initialized_data, object_file.counter.remote_initialized_data, object_file.endian);
 }
 
-using ReferenceInfo = std::tuple<std::vector<Reference>, std::vector<std::unique_ptr<ExpressionTree>>, std::vector<std::string>>;
+struct ReferenceInfo {
+    std::vector<Reference> references {};
+    std::vector<std::unique_ptr<ExpressionTree>> trees {};
+    std::vector<std::string> extern_refs {};
+};
+
 ReferenceInfo GetReferenceInfo(const object::ObjectFile& object_file) {
     ReferenceInfo reference_info {};
-    auto& [references, trees, extern_refs] = reference_info;
+    auto& references = reference_info.references;
+    auto& trees = reference_info.trees;
+    auto& extern_refs = reference_info.extern_refs;
 
-    auto expression_tree = [&object_file, &trees = trees, &extern_refs = extern_refs](auto& expr) {
+    auto generate_trees = [&](auto& expr) {
         auto index = trees.size();
         ExpressionTreeBuilder builder(object_file, extern_refs);
         trees.emplace_back(builder.Build(expr));
         return index;
     };
 
-    for (auto [offset, memory] : object_file.psect.code_data) {
-        for (auto& mapping : memory.expr_mappings) {
-            // TODO: check this...
-            auto byte_index = (memory.size * 8 - (mapping.offset + mapping.bit_count)) / 8;
+    auto generate_refs = [&](auto& data_map, ReferenceFlags flags) {
+        for (auto [offset, memory] : data_map) {
+            for (auto& mapping : memory.expr_mappings) {
+                // TODO: check this...
+                auto byte_index = (memory.size * 8 - (mapping.offset + mapping.bit_count)) / 8;
 
-            Reference reference {};
-            reference.BitNumber() = mapping.offset;
-            reference.FieldLength() = mapping.bit_count;
-            reference.LocalOffset() = offset + byte_index;
-            reference.LocationFlag() = 0b100000; // code
-            reference.LocationFlag() |= (mapping.is_signed ? 0b10000000000U : 0U);
-            reference.ExprTreeIndex() = expression_tree(*mapping.expression);
+                Reference reference {};
+                reference.BitNumber() = mapping.offset;
+                reference.FieldLength() = mapping.bit_count;
+                reference.LocalOffset() = offset + byte_index;
+                reference.LocationFlag() = mapping.is_signed ? (flags | ReferenceFlags::Signed) : flags;
+                reference.ExprTreeIndex() = generate_trees(*mapping.expression);
 
-            references.emplace_back(reference);
+                references.emplace_back(reference);
+            }
         }
-    }
+    };
 
-    // TODO: implement references for data
+    generate_refs(object_file.psect.code_data, ReferenceFlags::Code);
+    generate_refs(object_file.psect.initialized_data, ReferenceFlags::Data);
+    generate_refs(object_file.psect.remote_initialized_data, ReferenceFlags::Data | ReferenceFlags::Remote);
 
     return reference_info;
 }

@@ -1,7 +1,15 @@
     psect program,$0101,0,21,0,main
+
+    vsect
+init_data:
+    dc.l init_data
+    ends
 main:
     addi k1,sp,-32
     j 0x2345678
     sll k1,sp,0x1F
     bne t0,$0,main
+
+    lui a0,hi(init_data)
+    ori a0,a0,lo(init_data)
     ends
