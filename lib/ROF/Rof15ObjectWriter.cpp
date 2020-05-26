@@ -17,19 +17,19 @@ namespace rof {
 namespace {
 void AssertValid(const object::ObjectFile& object_file) {
     if (object_file.counter.uninitialized_data > support::MaxRangeOf<decltype(std::declval<Rof15Header>().StaticDataSize())>::value)
-        throw "Uninitialized counter too big for ROF.";
+        throw std::runtime_error("Uninitialized counter too big for ROF.");
 
     if (object_file.counter.initialized_data > support::MaxRangeOf<decltype(std::declval<Rof15Header>().InitializedDataSize())>::value)
-        throw "Initialized counter too big for ROF.";
+        throw std::runtime_error("Initialized counter too big for ROF.");
 
     if (object_file.counter.code > support::MaxRangeOf<decltype(std::declval<Rof15Header>().CodeSize())>::value)
-        throw "Code counter too big for ROF.";
+        throw std::runtime_error("Code counter too big for ROF.");
 
     if (object_file.counter.remote_uninitialized_data > support::MaxRangeOf<decltype(std::declval<Rof15Header>().RemoteStaticDataSizeRequired())>::value)
-        throw "Remote uninitialized counter too big for ROF.";
+        throw std::runtime_error("Remote uninitialized counter too big for ROF.");
 
     if (object_file.counter.remote_initialized_data > support::MaxRangeOf<decltype(std::declval<Rof15Header>().RemoteInitializedDataSizeRequired())>::value)
-        throw "Remote initialized counter too big for ROF.";
+        throw std::runtime_error("Remote initialized counter too big for ROF.");
 }
 
 uint16_t GetCPUIdentifier(object::CpuTarget cpu_target) {
