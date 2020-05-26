@@ -102,20 +102,17 @@ Rof15Header GetHeader(const object::ObjectFile& object_file) {
 
 std::vector<ExternDefinition> GetExternalDefinitions(const object::ObjectFile& object_file) {
     std::vector<ExternDefinition> extern_defs {};
-//    extern_defs.reserve(object_file.global_symbols.size());
-//
-//    for (auto& elem : object_file.global_symbols) {
-//        auto& name = elem.first;
-//        auto& symbol = elem.second;
-//
-//        //symbol.type
-//
-//        rof::ExternDefinition definition {};
-//        definition.Name() = name;
-//        // TODO: finish implementing
-//        //definition.Type() = symbo
-//        //extern_definitions.emplace_back({})
-//    }
+
+    for (auto& [name, symbol] : object_file.psect.symbols) {
+        if (symbol.is_global) {
+            rof::ExternDefinition definition{};
+            definition.Name() = name;
+            definition.SymbolValue() = symbol.value.value();
+            definition.Type() = static_cast<uint16_t>(GetDefinitionType(symbol.type));
+
+            extern_defs.emplace_back(std::move(definition));
+        }
+    }
 
     return extern_defs;
 }
@@ -187,7 +184,7 @@ ReferenceInfo GetReferenceInfo(const object::ObjectFile& object_file) {
                 reference.BitNumber() = mapping.offset;
                 reference.FieldLength() = mapping.bit_count;
                 reference.LocalOffset() = offset + byte_index;
-                reference.LocationFlag() = mapping.is_signed ? (flags | ReferenceFlags::Signed) : flags;
+                reference.LocationFlag() = static_cast<uint16_t>(mapping.is_signed ? (flags | ReferenceFlags::Signed) : flags);
                 reference.ExprTreeIndex() = generate_trees(*mapping.expression);
 
                 references.emplace_back(reference);

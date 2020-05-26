@@ -20,30 +20,9 @@ namespace rof {
 
         if (sym_itr != object_file.psect.symbols.end()) {
             // local reference
-            reference.Flags() |= 0b1000000000000U;
             auto& symbol = sym_itr->second;
-            switch (symbol.type) {
-                case object::SymbolInfo::Code:
-                    reference.Flags() |= 0b100U;
-                    break;
-                case object::SymbolInfo::Equ:
-                    reference.Flags() |= 0b10U;
-                    break;
-                case object::SymbolInfo::Set:
-                    reference.Flags() |= 0b01U;
-                    break;
-                case object::SymbolInfo::InitData:
-                    reference.Flags() |= 0b1U;
-                    break;
-                case object::SymbolInfo::UninitData:
-                    break;
-                case object::SymbolInfo::RemoteInitData:
-                    reference.Flags() |= 0b11U;
-                    break;
-                case object::SymbolInfo::RemoteUninitData:
-                    reference.Flags() |= 0b10U;
-                    break;
-            }
+            reference.Flags() = static_cast<uint16_t>(GetDefinitionType(symbol.type));
+            reference.Flags() |= 0b1000000000000U; // local
 
             // TODO: handle nullopt, or make sym val non-optional if NA
             reference.Value() = symbol.value.value();

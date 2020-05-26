@@ -143,9 +143,6 @@ struct ObjectFile {
 
     PSect psect {};
     std::vector<VSect> root_vsects {};
-
-    std::map<std::string, SymbolInfo> global_symbols {};
-    std::map<std::string, SymbolInfo> local_symbols {};
 };
 
 }

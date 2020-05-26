@@ -6,10 +6,10 @@ This project aims to be an open source toolchain for developing applications for
 This project is in early stages, and probably won't be of much use at the moment.
 
 ### Tools
-| tool    | description                                             | status                                                                                                                        | next feature                                         |
-|---------|---------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------|
-| `ident` | Show info about an OS-9 module.                         | Working.<br><br> Supports MIPS BE and i386. Others may work, but may need endian flipping without proper support.             |                                                      |
-| `amips` | Assemble OS-9 flavor MIPS assembly to ROF object files. | Partially working.<br><br> Can produce valid code / ROFs, but is missing support for many directives and pseudo instructions. | Implement ROF writer support for extern definitions. |
+| tool    | description                                             | status                                                                                                                        | todo                                                                                                                        |
+|---------|---------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------|
+| `ident` | Show info about an OS-9 module.                         | Working.<br><br> Supports MIPS BE and i386. Others may work, but may need endian flipping without proper support.             |                                                                                                                             |
+| `amips` | Assemble OS-9 flavor MIPS assembly to ROF object files. | Partially working.<br><br> Can produce valid code / ROFs, but is missing support for many directives and pseudo instructions. | Issues tagged [[assembler]](https://github.com/kevinhartman/open-mwos-sdk/issues?q=is%3Aissue+is%3Aopen+label%3Aassembler). |
 
 Note: Conformance with original tooling is not necessarily a goal (at least right now).
 

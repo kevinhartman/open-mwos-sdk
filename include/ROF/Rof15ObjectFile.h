@@ -4,36 +4,59 @@
 #include "Rof15Header.h"
 #include "SerializableStruct.h"
 
+#include <cassert>
 #include <memory>
 #include <variant>
 #include <vector>
 
 namespace rof {
-
-using SerializableExternDefinition = SerializableStruct<SerializableString, uint16_t, uint32_t>;
-
-enum ExternDefinitionType : uint16_t {
-    Data_NonRemote_Uninitialized = 0b000,
-    Data_NonRemote_Initialized = 0b001,
-    Data_Remote_Uninitialized = 0b010,
-    Data_Remote_Initialized = 0b011,
-
-    Code_NotCommonBlock_CodeLabel = 0b100,
-    Code_NotCommonBlock_SetLabel = 0b101,
-    Code_NotCommonBlock_EquLabel = 0b110,
-
-    Code_CommonBlock_CodeLabel = 0b100000100,
-    Code_CommonBlock_SetLabel = 0b100000101,
-    Code_CommonBlock_EquLabel = 0b100000110
+enum class DefinitionType : uint16_t {
+    Data = 0,
+    Code = 1 << 2,
+    Uninitialized = 0,
+    Initialized = 1,
+    UninitializedRemote = 2,
+    InitializedRemote = 3,
+    Set = 1,
+    Equ = 2,
+    CommonBlock = 1 << 8
 };
 
+inline DefinitionType operator|(DefinitionType a, DefinitionType b)
+{
+    return static_cast<DefinitionType>(static_cast<uint16_t>(a) | static_cast<uint16_t>(b));
+}
+
+inline DefinitionType GetDefinitionType(object::SymbolInfo::Type type) {
+    switch (type) {
+        case object::SymbolInfo::Code:
+            return DefinitionType::Code;
+        case object::SymbolInfo::Equ:
+            return DefinitionType::Code | DefinitionType::Equ;
+        case object::SymbolInfo::Set:
+            return DefinitionType::Code | DefinitionType::Set;
+        case object::SymbolInfo::InitData:
+            return DefinitionType::Initialized;
+        case object::SymbolInfo::UninitData:
+            return DefinitionType::Uninitialized;
+        case object::SymbolInfo::RemoteInitData:
+            return DefinitionType::InitializedRemote;
+        case object::SymbolInfo::RemoteUninitData:
+            return DefinitionType::UninitializedRemote;
+        default:
+            assert("unknown definition type");
+            return DefinitionType::Data;
+    }
+}
+
+using SerializableExternDefinition = SerializableStruct<SerializableString, uint16_t, uint32_t>;
 struct ExternDefinition : SerializableExternDefinition {
     auto& Name() { return std::get<0>(*this); }
     auto& Type() { return std::get<1>(*this); }
     auto& SymbolValue() { return std::get<2>(*this); }
 };
 
-enum ReferenceFlags : uint16_t {
+enum class ReferenceFlags : uint16_t {
     Data = 0,
     Code = 1 << 5,
     Remote = 1 << 9,
