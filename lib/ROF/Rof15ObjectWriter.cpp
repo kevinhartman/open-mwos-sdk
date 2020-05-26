@@ -117,31 +117,31 @@ std::vector<ExternDefinition> GetExternalDefinitions(const object::ObjectFile& o
     return extern_defs;
 }
 
-    std::vector<uint8_t> SerializeDataMap(
-        const std::map<object::local_offset, object::MemoryValue>& data_map,
-        size_t size,
-        support::Endian endian
-    ) {
-        std::vector<uint8_t> result {};
+std::vector<uint8_t> SerializeDataMap(
+    const std::map<object::local_offset, object::MemoryValue>& data_map,
+    size_t size,
+    support::Endian endian
+) {
+    std::vector<uint8_t> result {};
 
-        size_t write = 0;
-        for (auto [offset, memory] : data_map) {
-            // Zero pad any memory not identified in the memory map
-            result.insert(result.end(), offset - write, 0);
+    size_t write = 0;
+    for (auto [offset, memory] : data_map) {
+        // Zero pad any memory not identified in the memory map
+        result.insert(result.end(), offset - write, 0);
 
-            if (endian != support::HostEndian) {
-                std::reverse(memory.data.raw.begin(), memory.data.raw.begin() + memory.size);
-            }
-
-            result.insert(result.end(), memory.data.raw.begin(), memory.data.raw.begin() + memory.size);
-            write = offset + memory.size;
+        if (endian != support::HostEndian) {
+            std::reverse(memory.data.raw.begin(), memory.data.raw.begin() + memory.size);
         }
 
-        // Zero pad any memory after the map, up to the final counter size
-        result.insert(result.end(), size - write, 0);
-
-        return result;
+        result.insert(result.end(), memory.data.raw.begin(), memory.data.raw.begin() + memory.size);
+        write = offset + memory.size;
     }
+
+    // Zero pad any memory after the map, up to the final counter size
+    result.insert(result.end(), size - write, 0);
+
+    return result;
+}
 
 std::vector<uint8_t> GetCode(const object::ObjectFile& object_file) {
     return SerializeDataMap(object_file.psect.code_data, object_file.counter.code, object_file.endian);
