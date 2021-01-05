@@ -109,6 +109,7 @@ std::vector<ExternDefinition> GetExternalDefinitions(const object::ObjectFile& o
             definition.Name() = name;
             definition.SymbolValue() = symbol.value.value();
             definition.Type() = static_cast<uint16_t>(GetDefinitionType(symbol.type));
+            // TODO: mark common blocks (bit 8) if declared with com directive
 
             extern_defs.emplace_back(std::move(definition));
         }

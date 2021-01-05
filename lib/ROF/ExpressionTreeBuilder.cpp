@@ -24,6 +24,8 @@ namespace rof {
             reference.Flags() = static_cast<uint16_t>(GetDefinitionType(symbol.type));
             reference.Flags() |= 0b1000000000000U; // local
 
+            // TODO: handle "common blocks" (from com directive) here (bit 8)
+
             // TODO: handle nullopt, or make sym val non-optional if NA
             reference.Value() = symbol.value.value();
         } else {
